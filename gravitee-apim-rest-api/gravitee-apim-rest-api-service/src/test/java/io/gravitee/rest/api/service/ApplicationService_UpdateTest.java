@@ -189,6 +189,7 @@ public class ApplicationService_UpdateTest {
         settings.setApp(clientSettings);
         when(updateApplication.getSettings()).thenReturn(settings);
 
+        when(updateApplication.getName()).thenReturn(APPLICATION_NAME);
         when(existingApplication.getName()).thenReturn(APPLICATION_NAME);
         when(existingApplication.getStatus()).thenReturn(ApplicationStatus.ACTIVE);
         when(existingApplication.getType()).thenReturn(ApplicationType.SIMPLE);
