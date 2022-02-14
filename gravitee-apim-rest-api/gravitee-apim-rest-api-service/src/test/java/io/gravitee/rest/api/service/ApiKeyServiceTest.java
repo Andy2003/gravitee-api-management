@@ -22,6 +22,7 @@ import static org.mockito.Mockito.*;
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.ApiKeyRepository;
 import io.gravitee.repository.management.model.ApiKey;
+import io.gravitee.repository.management.model.ApiKeyMode;
 import io.gravitee.repository.management.model.Audit;
 import io.gravitee.rest.api.model.*;
 import io.gravitee.rest.api.service.common.GraviteeContext;
@@ -114,7 +115,7 @@ public class ApiKeyServiceTest {
         assertEquals(API_KEY, apiKey.getKey());
         assertFalse(apiKey.isRevoked());
         assertEquals(subscription.getEndingAt(), apiKey.getExpireAt());
-        assertEquals(subscription.getId(), apiKey.getSubscription());
+        assertEquals(subscription.getId(), apiKey.getSubscriptions().get(0).getId());
 
         ArgumentCaptor<Map> argument = ArgumentCaptor.forClass(Map.class);
         verify(auditService).createApiAuditLog(any(), argument.capture(), any(), any(), any(), any());
@@ -144,7 +145,7 @@ public class ApiKeyServiceTest {
         verify(apiKeyRepository, times(1)).create(any());
         assertFalse(apiKey.isRevoked());
         assertEquals(subscription.getEndingAt(), apiKey.getExpireAt());
-        assertEquals(subscription.getId(), apiKey.getSubscription());
+        assertEquals(subscription.getId(), apiKey.getSubscriptions().get(0).getId());
 
         ArgumentCaptor<Map> argument = ArgumentCaptor.forClass(Map.class);
         verify(auditService).createApiAuditLog(any(), argument.capture(), any(), any(), any(), any());
@@ -169,7 +170,7 @@ public class ApiKeyServiceTest {
     public void shouldNotGenerateBecauseApiKeyAlreadyExistsForAnotherApp() throws TechnicalException {
         ApiKey existingKey = new ApiKey();
         existingKey.setApplication("another Application");
-        existingKey.setApi("another Api");
+        existingKey.setSubscriptions(List.of(SUBSCRIPTION_ID));
 
         when(subscriptionService.findById(SUBSCRIPTION_ID)).thenReturn(subscription);
         when(apiKeyRepository.findByKey("alreadyExistingApiKey")).thenReturn(List.of(existingKey));
@@ -180,10 +181,10 @@ public class ApiKeyServiceTest {
     @Test
     public void shouldRevoke() throws Exception {
         apiKey = new ApiKey();
+        apiKey.setId(API_KEY);
         apiKey.setKey("123-456-789");
-        apiKey.setSubscription(SUBSCRIPTION_ID);
+        apiKey.setSubscriptions(List.of(SUBSCRIPTION_ID));
         apiKey.setCreatedAt(new Date());
-        apiKey.setPlan(PLAN_ID);
         apiKey.setApplication(APPLICATION_ID);
         final ApiModelEntity api = mock(ApiModelEntity.class);
         when(api.getId()).thenReturn("123");
@@ -193,13 +194,13 @@ public class ApiKeyServiceTest {
         when(subscription.getPlan()).thenReturn(PLAN_ID);
 
         // Stub
-        when(apiKeyRepository.findByKeyAndApi(API_KEY, API_ID)).thenReturn(Optional.of(apiKey));
+        when(apiKeyRepository.findById(API_KEY)).thenReturn(Optional.of(apiKey));
         when(applicationService.findById(GraviteeContext.getCurrentEnvironment(), subscription.getApplication())).thenReturn(application);
         when(planService.findById(subscription.getPlan())).thenReturn(plan);
         when(apiService.findByIdForTemplates(any())).thenReturn(api);
 
         // Run
-        apiKeyService.revoke(API_KEY, API_ID, true);
+        apiKeyService.revoke(API_KEY, true);
 
         // Verify
         verify(apiKeyRepository, times(1)).update(any());
@@ -218,9 +219,9 @@ public class ApiKeyServiceTest {
         apiKey = new ApiKey();
         apiKey.setRevoked(true);
 
-        when(apiKeyRepository.findByKeyAndApi(API_KEY, API_ID)).thenReturn(Optional.of(apiKey));
+        when(apiKeyRepository.findById(API_KEY)).thenReturn(Optional.of(apiKey));
 
-        apiKeyService.revoke(API_KEY, API_ID, true);
+        apiKeyService.revoke(API_KEY, true);
     }
 
     @Test(expected = ApiKeyAlreadyExpiredException.class)
@@ -228,48 +229,56 @@ public class ApiKeyServiceTest {
         apiKey = new ApiKey();
         apiKey.setExpireAt(Date.from(new Date().toInstant().minus(1, ChronoUnit.DAYS)));
 
-        when(apiKeyRepository.findByKeyAndApi(API_KEY, API_ID)).thenReturn(Optional.of(apiKey));
+        when(apiKeyRepository.findById(API_KEY)).thenReturn(Optional.of(apiKey));
 
-        apiKeyService.revoke(API_KEY, API_ID, true);
+        apiKeyService.revoke(API_KEY, true);
     }
 
     @Test(expected = ApiKeyNotFoundException.class)
     public void shouldNotRevokeBecauseNotFound() throws TechnicalException {
-        when(apiKeyRepository.findByKeyAndApi(API_KEY, API_ID)).thenReturn(Optional.empty());
+        when(apiKeyRepository.findById(API_KEY)).thenReturn(Optional.empty());
 
-        apiKeyService.revoke(API_KEY, API_ID, true);
+        apiKeyService.revoke(API_KEY, true);
     }
 
     @Test(expected = TechnicalManagementException.class)
     public void shouldNotRevokeBecauseTechnicalException() throws TechnicalException {
-        when(apiKeyRepository.findByKeyAndApi(API_KEY, API_ID)).thenThrow(TechnicalException.class);
+        when(apiKeyRepository.findById(API_KEY)).thenThrow(TechnicalException.class);
 
-        apiKeyService.revoke(API_KEY, API_ID, true);
+        apiKeyService.revoke(API_KEY, true);
     }
 
     @Test
     public void shouldReactivateRevoked() throws Exception {
         apiKey = new ApiKey();
         apiKey.setKey("123-456-789");
-        apiKey.setSubscription(SUBSCRIPTION_ID);
+        apiKey.setSubscriptions(List.of(SUBSCRIPTION_ID));
         apiKey.setCreatedAt(new Date());
-        apiKey.setPlan(PLAN_ID);
         apiKey.setApplication(APPLICATION_ID);
         apiKey.setRevoked(true);
         final ApiModelEntity api = new ApiModelEntity();
         api.setId("123");
 
         SubscriptionEntity subscription = new SubscriptionEntity();
+        subscription.setId(SUBSCRIPTION_ID);
         subscription.setApi(api.getId());
         subscription.setStatus(SubscriptionStatus.PAUSED);
 
+        ApplicationEntity application = mock(ApplicationEntity.class);
+        when(application.getApiKeyMode()).thenReturn(ApiKeyMode.EXCLUSIVE.name());
+
+        ApiKeyEntity apiKeyEntity = mock(ApiKeyEntity.class);
+        when(apiKeyEntity.getApplication()).thenReturn(application);
+        when(apiKeyEntity.getSubscriptions()).thenReturn(List.of(subscription));
+
+
         // Stub
-        when(apiKeyRepository.findByKeyAndApi(API_KEY, API_ID)).thenReturn(Optional.of(apiKey));
-        when(subscriptionService.findById(apiKey.getSubscription())).thenReturn(subscription);
+        when(apiKeyRepository.findById(API_KEY)).thenReturn(Optional.of(apiKey));
+        when(subscriptionService.findByIdIn(apiKey.getSubscriptions())).thenReturn(List.of(subscription));
         when(apiKeyRepository.update(any())).thenAnswer(i -> i.getArgument(0));
 
         // Run
-        apiKeyService.reactivate(API_KEY, API_ID);
+        apiKeyService.reactivate(apiKeyEntity);
 
         ArgumentCaptor<Map> argument = ArgumentCaptor.forClass(Map.class);
         verify(auditService).createApiAuditLog(any(), argument.capture(), any(), any(), any(), any());
@@ -284,25 +293,32 @@ public class ApiKeyServiceTest {
     public void shouldReactivateExpired() throws Exception {
         apiKey = new ApiKey();
         apiKey.setKey("123-456-789");
-        apiKey.setSubscription(SUBSCRIPTION_ID);
+        apiKey.setSubscriptions(List.of(SUBSCRIPTION_ID));
         apiKey.setCreatedAt(new Date());
-        apiKey.setPlan(PLAN_ID);
         apiKey.setApplication(APPLICATION_ID);
         apiKey.setExpireAt(new Date(System.currentTimeMillis() - 10000));
         final ApiModelEntity api = new ApiModelEntity();
         api.setId("123");
 
         SubscriptionEntity subscription = new SubscriptionEntity();
+        subscription.setId(SUBSCRIPTION_ID);
         subscription.setApi(api.getId());
         subscription.setStatus(SubscriptionStatus.PAUSED);
 
+        ApplicationEntity application = mock(ApplicationEntity.class);
+        when(application.getApiKeyMode()).thenReturn(ApiKeyMode.EXCLUSIVE.name());
+
+        ApiKeyEntity apiKeyEntity = mock(ApiKeyEntity.class);
+        when(apiKeyEntity.getApplication()).thenReturn(application);
+        when(apiKeyEntity.getSubscriptions()).thenReturn(List.of(subscription));
+
         // Stub
         when(apiKeyRepository.findByKeyAndApi(API_KEY, API_ID)).thenReturn(Optional.of(apiKey));
-        when(subscriptionService.findById(apiKey.getSubscription())).thenReturn(subscription);
+        when(subscriptionService.findByIdIn(apiKey.getSubscriptions())).thenReturn(List.of(subscription));
         when(apiKeyRepository.update(any())).thenAnswer(i -> i.getArgument(0));
 
         // Run
-        apiKeyService.reactivate(API_KEY, API_ID);
+        apiKeyService.reactivate(apiKeyEntity);
 
         ArgumentCaptor<Map> argument = ArgumentCaptor.forClass(Map.class);
         verify(auditService).createApiAuditLog(any(), argument.capture(), any(), any(), any(), any());
@@ -315,51 +331,68 @@ public class ApiKeyServiceTest {
 
     @Test(expected = ApiKeyAlreadyActivatedException.class)
     public void shouldNotReactivateBecauseOfAlreadyActivated() throws Exception {
+        ApiKeyEntity apiKeyEntity = mock(ApiKeyEntity.class);
+        when(apiKeyEntity.getId()).thenReturn(API_KEY);
+
         apiKey = new ApiKey();
         apiKey.setKey("123-456-789");
-        apiKey.setSubscription(SUBSCRIPTION_ID);
+        apiKey.setSubscriptions(List.of(SUBSCRIPTION_ID));
         apiKey.setCreatedAt(new Date());
-        apiKey.setPlan(PLAN_ID);
         apiKey.setApplication(APPLICATION_ID);
 
         // Stub
-        when(apiKeyRepository.findByKeyAndApi(API_KEY, API_ID)).thenReturn(Optional.of(apiKey));
+        when(apiKeyRepository.findById(API_KEY)).thenReturn(Optional.of(apiKey));
 
         // Run
-        apiKeyService.reactivate(API_KEY, API_ID);
+        apiKeyService.reactivate(apiKeyEntity);
     }
 
     @Test(expected = ApiKeyNotFoundException.class)
     public void shouldNotReactivateBecauseOfApiKeyNotFound() throws TechnicalException {
-        when(apiKeyRepository.findByKeyAndApi(API_KEY, API_ID)).thenReturn(Optional.empty());
+        when(apiKeyRepository.findById(API_KEY)).thenReturn(Optional.empty());
 
-        apiKeyService.reactivate(API_KEY, API_ID);
+        ApiKeyEntity apiKeyEntity = new ApiKeyEntity();
+        when(apiKeyEntity.getId()).thenReturn(API_KEY);
+
+        apiKeyService.reactivate(apiKeyEntity);
     }
 
     @Test(expected = SubscriptionNotActiveException.class)
     public void shouldNotReactivateBecauseOfNotActiveSubscription() throws TechnicalException {
         apiKey = new ApiKey();
         apiKey.setKey("123-456-789");
-        apiKey.setSubscription(SUBSCRIPTION_ID);
+        apiKey.setSubscriptions(List.of(SUBSCRIPTION_ID));
         apiKey.setCreatedAt(new Date());
-        apiKey.setPlan(PLAN_ID);
         apiKey.setApplication(APPLICATION_ID);
         apiKey.setExpireAt(new Date(System.currentTimeMillis() - 10000));
 
+
         SubscriptionEntity subscriptionEntity = new SubscriptionEntity();
-        subscriptionEntity.setStatus(SubscriptionStatus.CLOSED);
+        subscription.setId(SUBSCRIPTION_ID);
+        subscription.setApi(API_ID);
+        subscription.setStatus(SubscriptionStatus.CLOSED);
+
+        ApplicationEntity application = mock(ApplicationEntity.class);
+        when(application.getApiKeyMode()).thenReturn(ApiKeyMode.EXCLUSIVE.name());
+
+        ApiKeyEntity apiKeyEntity = mock(ApiKeyEntity.class);
+        when(apiKeyEntity.getId()).thenReturn(API_KEY);
+        when(apiKeyEntity.getApplication()).thenReturn(application);
+        when(apiKeyEntity.getSubscriptions()).thenReturn(List.of(subscription));
+
         // Stub
-        when(apiKeyRepository.findByKeyAndApi(API_KEY, API_ID)).thenReturn(Optional.of(apiKey));
+        when(apiKeyRepository.findById(API_KEY)).thenReturn(Optional.of(apiKey));
         when(subscriptionService.findById(SUBSCRIPTION_ID)).thenReturn(subscriptionEntity);
 
-        apiKeyService.reactivate(API_KEY, API_ID);
+        apiKeyService.reactivate(apiKeyEntity);
     }
 
     @Test(expected = TechnicalManagementException.class)
     public void shouldNotReactivate_technicalException() throws TechnicalException {
         when(apiKeyRepository.findByKeyAndApi(API_KEY, API_ID)).thenThrow(TechnicalException.class);
-
-        apiKeyService.revoke(API_KEY, API_ID, true);
+        ApiKeyEntity apiKeyEntity = mock(ApiKeyEntity.class);
+        when(apiKeyEntity.getId()).thenReturn(API_KEY);
+        apiKeyService.revoke(apiKeyEntity, false);
     }
 
     @Test
@@ -368,9 +401,8 @@ public class ApiKeyServiceTest {
         // apiKey object is not a mock since its state is updated by the call to apiKeyService.renew()
         apiKey = new ApiKey();
         apiKey.setKey("123-456-789");
-        apiKey.setSubscription(SUBSCRIPTION_ID);
+        apiKey.setSubscriptions(List.of(SUBSCRIPTION_ID));
         apiKey.setCreatedAt(new Date());
-        apiKey.setPlan(PLAN_ID);
         apiKey.setApplication(APPLICATION_ID);
         final ApiModelEntity api = mock(ApiModelEntity.class);
         when(api.getId()).thenReturn("123");
@@ -418,9 +450,8 @@ public class ApiKeyServiceTest {
         // apiKey object is not a mock since its state is updated by the call to apiKeyService.renew()
         apiKey = new ApiKey();
         apiKey.setKey("123-456-789");
-        apiKey.setSubscription(SUBSCRIPTION_ID);
+        apiKey.setSubscriptions(List.of(SUBSCRIPTION_ID));
         apiKey.setCreatedAt(new Date());
-        apiKey.setPlan(PLAN_ID);
         apiKey.setApplication(APPLICATION_ID);
         apiKey.setExpireAt(Date.from(new Date().toInstant().minus(1, ChronoUnit.DAYS)));
         final ApiModelEntity api = mock(ApiModelEntity.class);
@@ -456,10 +487,14 @@ public class ApiKeyServiceTest {
     @Test(expected = ApiKeyAlreadyExistingException.class)
     public void shouldNotRenewBecauseApiKeyAlreadyExistsForAnotherApp() throws TechnicalException {
         ApiKey existingKey = new ApiKey();
-        existingKey.setApplication("another Application");
-        existingKey.setApi("another Api");
 
-        when(subscriptionService.findById(SUBSCRIPTION_ID)).thenReturn(subscription);
+        existingKey.setSubscriptions(List.of(SUBSCRIPTION_ID));
+
+        SubscriptionEntity subscriptionEntity = new SubscriptionEntity();
+        subscriptionEntity.setApi("another API");
+        subscriptionEntity.setApplication("another application");
+
+        when(subscriptionService.findById(SUBSCRIPTION_ID)).thenReturn(subscriptionEntity);
         when(apiKeyRepository.findByKey("alreadyExistingApiKey")).thenReturn(List.of(existingKey));
 
         apiKeyService.renew(SUBSCRIPTION_ID, "alreadyExistingApiKey");
@@ -478,7 +513,6 @@ public class ApiKeyServiceTest {
         when(apiKeyRepository.findByKeyAndApi("ABC", "api12")).thenReturn(Optional.of(existingApiKey));
         ApiKeyEntity apiKeyEntity = new ApiKeyEntity();
         apiKeyEntity.setKey("ABC");
-        apiKeyEntity.setApi("api12");
         apiKeyEntity.setRevoked(true);
         apiKeyEntity.setPaused(true);
 
@@ -496,7 +530,6 @@ public class ApiKeyServiceTest {
         when(apiKeyRepository.findByKeyAndApi("ABC", "api12")).thenReturn(Optional.of(existingApiKey));
         ApiKeyEntity apiKeyEntity = new ApiKeyEntity();
         apiKeyEntity.setKey("ABC");
-        apiKeyEntity.setApi("api12");
         apiKeyEntity.setPaused(true);
         apiKeyEntity.setExpireAt(new Date());
         SubscriptionEntity subscriptionEntity = new SubscriptionEntity();
@@ -563,13 +596,31 @@ public class ApiKeyServiceTest {
         String apiId = "my-api-id";
         String applicationId = "my-application-id";
 
+        ApplicationEntity application = mock(ApplicationEntity.class);
+        when(application.getApiKeyMode()).thenReturn(ApiKeyMode.UNSPECIFIED.name());
+        when(applicationService.findById(anyString(), eq(applicationId))).thenReturn(application);
+
+        SubscriptionEntity subscriptionEntity1 = new SubscriptionEntity();
+        subscriptionEntity1.setId("subscription-1");
+        subscriptionEntity1.setApplication(applicationId);
+        subscriptionEntity1.setApi("anotherAPI-1");
+
+        when(subscriptionService.findById("subscription-1")).thenReturn(subscriptionEntity1);
+
         ApiKey existingApiKey1 = new ApiKey();
-        existingApiKey1.setApi("anotherApi-1");
+        existingApiKey1.setSubscriptions(List.of("subscription-1"));
         existingApiKey1.setApplication(applicationId);
         existingApiKey1.setKey(apiKeyToCreate);
 
+        SubscriptionEntity subscriptionEntity2 = new SubscriptionEntity();
+        subscriptionEntity1.setId("subscription-2");
+        subscriptionEntity1.setApplication(applicationId);
+        subscriptionEntity1.setApi("anotherAPI-2");
+
+        when(subscriptionService.findById("subscription-2")).thenReturn(subscriptionEntity2);
+
         ApiKey existingApiKey2 = new ApiKey();
-        existingApiKey2.setApi("anotherApi-2");
+        existingApiKey2.setSubscriptions(List.of("subscription-2"));
         existingApiKey2.setApplication(applicationId);
         existingApiKey2.setKey(apiKeyToCreate);
 
@@ -586,15 +637,33 @@ public class ApiKeyServiceTest {
         String apiId = "my-api-id";
         String applicationId = "my-application-id";
 
+        ApplicationEntity application = mock(ApplicationEntity.class);
+        when(application.getApiKeyMode()).thenReturn(ApiKeyMode.UNSPECIFIED.name());
+        when(applicationService.findById(anyString(), eq(applicationId))).thenReturn(application);
+
+        SubscriptionEntity subscriptionEntity1 = new SubscriptionEntity();
+        subscriptionEntity1.setId("subscription-1");
+        subscriptionEntity1.setApplication(applicationId);
+        subscriptionEntity1.setApi("anotherAPI-1");
+
         ApiKey existingApiKey1 = new ApiKey();
-        existingApiKey1.setApi("anotherApi-1");
+        existingApiKey1.setSubscriptions(List.of("subscription-1"));
         existingApiKey1.setApplication(applicationId);
         existingApiKey1.setKey(apiKeyToCreate);
 
+        when(subscriptionService.findById("subscription-1")).thenReturn(subscriptionEntity1);
+
+        SubscriptionEntity subscriptionEntity2 = new SubscriptionEntity();
+        subscriptionEntity1.setId("subscription-2");
+        subscriptionEntity1.setApplication(applicationId);
+        subscriptionEntity1.setApi(apiId);
+
         ApiKey existingApiKey2 = new ApiKey();
-        existingApiKey2.setApi(apiId);
+        existingApiKey2.setSubscriptions(List.of("subscription-2"));
         existingApiKey2.setApplication(applicationId);
         existingApiKey2.setKey(apiKeyToCreate);
+
+        when(subscriptionService.findById("subscription-2")).thenReturn(subscriptionEntity2);
 
         when(apiKeyRepository.findByKey(apiKeyToCreate)).thenReturn(List.of(existingApiKey1, existingApiKey2));
 
@@ -609,10 +678,21 @@ public class ApiKeyServiceTest {
         String apiId = "my-api-id";
         String applicationId = "my-application-id";
 
+        ApplicationEntity application = mock(ApplicationEntity.class);
+        when(application.getApiKeyMode()).thenReturn(ApiKeyMode.UNSPECIFIED.name());
+        when(applicationService.findById(anyString(), eq(applicationId))).thenReturn(application);
+
+        SubscriptionEntity subscriptionEntity = new SubscriptionEntity();
+        subscriptionEntity.setId("subscription");
+        subscriptionEntity.setApplication("anotherApp");
+        subscriptionEntity.setApi("anotherAPI-1");
+
         ApiKey existingApiKey = new ApiKey();
-        existingApiKey.setApi("anotherApi-1");
+        existingApiKey.setSubscriptions(List.of("subscription"));
         existingApiKey.setApplication("anotherApp");
         existingApiKey.setKey(apiKeyToCreate);
+
+        when(subscriptionService.findById("subscription")).thenReturn(subscriptionEntity);
 
         when(apiKeyRepository.findByKey(apiKeyToCreate)).thenReturn(List.of(existingApiKey));
 

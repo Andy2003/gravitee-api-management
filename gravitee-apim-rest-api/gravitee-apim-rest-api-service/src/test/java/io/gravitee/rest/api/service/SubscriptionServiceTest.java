@@ -1265,9 +1265,11 @@ public class SubscriptionServiceTest {
         Mockito.verify(delegate, times(1)).apply(any(Metadata.class), eq(apiEntity));
     }
 
-    private ApiKeyEntity buildTestApiKeyForSubscription(String subscription) {
+    private ApiKeyEntity buildTestApiKeyForSubscription(String subscriptionId) {
         ApiKeyEntity apikey = new ApiKeyEntity();
-        apikey.setSubscription(subscription);
+        SubscriptionEntity subscription = new SubscriptionEntity();
+        subscription.setId(subscriptionId);
+        apikey.setSubscriptions(List.of(subscription));
         return apikey;
     }
 

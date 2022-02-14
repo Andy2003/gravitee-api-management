@@ -54,6 +54,8 @@ public interface ApiKeyService {
 
     ApiKeyEntity updateDaysToExpirationOnLastNotification(ApiKeyEntity apiKeyEntity, Integer value);
 
+    boolean canCreate(String apiKey, SubscriptionEntity subscription);
+
     boolean canCreate(String apiKey, String apiId, String applicationId);
 
     Collection<ApiKeyEntity> search(ApiKeyQuery query);

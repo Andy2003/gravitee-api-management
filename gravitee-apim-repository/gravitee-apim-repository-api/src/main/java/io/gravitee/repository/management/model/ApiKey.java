@@ -96,7 +96,6 @@ public class ApiKey implements Serializable {
         this.key = cloned.key;
         this.subscriptions = cloned.subscriptions;
         this.application = cloned.application;
-        this.plan = cloned.plan;
         this.expireAt = cloned.expireAt;
         this.createdAt = cloned.createdAt;
         this.updatedAt = cloned.updatedAt;
@@ -104,7 +103,6 @@ public class ApiKey implements Serializable {
         this.revokedAt = cloned.revokedAt;
         this.paused = cloned.paused;
         this.daysToExpirationOnLastNotification = cloned.daysToExpirationOnLastNotification;
-        this.api = cloned.api;
     }
 
     public boolean isRevoked() {
@@ -129,14 +127,6 @@ public class ApiKey implements Serializable {
 
     public void setApplication(String application) {
         this.application = application;
-    }
-
-    public String getPlan() {
-        return plan;
-    }
-
-    public void setPlan(String plan) {
-        this.plan = plan;
     }
 
     public Date getExpireAt() {
@@ -201,14 +191,6 @@ public class ApiKey implements Serializable {
 
     public void setId(String id) {
         this.id = id;
-    }
-
-    public String getApi() {
-        return api;
-    }
-
-    public void setApi(String api) {
-        this.api = api;
     }
 
     @Override

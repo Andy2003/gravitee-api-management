@@ -22,9 +22,12 @@ import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.ApiKeyRepository;
 import io.gravitee.repository.management.api.search.ApiKeyCriteria;
 import io.gravitee.repository.management.model.ApiKey;
+import io.gravitee.repository.management.model.ApiKeyMode;
 import io.gravitee.repository.management.model.Audit;
 import io.gravitee.rest.api.model.*;
+import io.gravitee.rest.api.model.api.ApiEntity;
 import io.gravitee.rest.api.model.key.ApiKeyQuery;
+import io.gravitee.rest.api.model.subscription.SubscriptionQuery;
 import io.gravitee.rest.api.service.*;
 import io.gravitee.rest.api.service.common.GraviteeContext;
 import io.gravitee.rest.api.service.common.UuidString;
@@ -167,7 +170,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
     private ApiKey generateForSubscription(String subscription, String customApiKey) {
         SubscriptionEntity subscriptionEntity = subscriptionService.findById(subscription);
 
-        if (customApiKey != null && !canCreate(customApiKey, subscriptionEntity.getApi(), subscriptionEntity.getApplication())) {
+        if (customApiKey != null && !canCreate(customApiKey, subscriptionEntity)) {
             throw new ApiKeyAlreadyExistingException();
         }
 
@@ -180,11 +183,9 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
         apiKey.setId(UuidString.generateRandom());
         apiKey.setSubscriptions(List.of(subscription));
         apiKey.setApplication(subscriptionEntity.getApplication());
-        apiKey.setPlan(subscriptionEntity.getPlan());
         apiKey.setCreatedAt(new Date());
         apiKey.setUpdatedAt(apiKey.getCreatedAt());
         apiKey.setKey(customApiKey != null ? customApiKey : apiKeyGenerator.generate());
-        apiKey.setApi(subscriptionEntity.getApi());
 
         // By default, the API Key will expire when subscription is closed
         apiKey.setExpireAt(subscriptionEntity.getEndingAt());
@@ -195,7 +196,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
     @Override
     public void revoke(String keyId, boolean notify) {
         try {
-            ApiKey key = apiKeyRepository.findById(keyId).orElseThrow(() -> new ApiKeyNotFoundException());
+            ApiKey key = apiKeyRepository.findById(keyId).orElseThrow(ApiKeyNotFoundException::new);
             revoke(key, notify);
         } catch (TechnicalException e) {
             String message = String.format("An error occurs while trying to revoke a key with id %s", keyId);
@@ -233,7 +234,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
     @Override
     public ApiKeyEntity reactivate(ApiKeyEntity apiKeyEntity) {
         try {
-            ApiKey key = apiKeyRepository.findById(apiKeyEntity.getId()).orElseThrow(() -> new ApiKeyNotFoundException());
+            ApiKey key = apiKeyRepository.findById(apiKeyEntity.getId()).orElseThrow(ApiKeyNotFoundException::new);
 
             LOGGER.debug("Reactivate API Key id {}", apiKeyEntity.getId());
 
@@ -248,7 +249,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
 
             // If this is not a shared API key,
             // Get the subscription to get ending date and set key expiration date
-            if (apiKeyEntity.getApplication().getApiKeyMode() != "SHARED") {
+            if (!apiKeyEntity.getApplication().getApiKeyMode().equals(ApiKeyMode.SHARED.name())) {
                 SubscriptionEntity subscription = subscriptionService.findById(key.getSubscriptions().get(0));
                 if (subscription.getStatus() != SubscriptionStatus.PAUSED && subscription.getStatus() != SubscriptionStatus.ACCEPTED) {
                     throw new SubscriptionNotActiveException(subscription);
@@ -386,26 +387,47 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
     }
 
     @Override
-    public boolean canCreate(String apiKey, String apiId, String applicationId) {
-        LOGGER.debug("Check if an API Key can be created for api {} and application {}", apiId, applicationId);
-        try {
-            return apiKeyRepository
-                .findByKey(apiKey)
-                .stream()
-                .noneMatch(
+    public boolean canCreate(String apiKey, SubscriptionEntity subscription) {
+        LOGGER.debug("Check if an API Key can be created for subscription {}", subscription.getId());
+
+        ApplicationEntity application = applicationService.findById("TODO", subscription.getApplication());
+
+        if (!application.getApiKeyMode().equals(ApiKeyMode.SHARED.name())) {
+            try {
+                return apiKeyRepository
+                  .findByKey(apiKey)
+                  .stream()
+                  .noneMatch(
                     existingKey ->
-                        !existingKey.getApplication().equals(applicationId) ||
-                        (existingKey.getApplication().equals(applicationId) && existingKey.getApi().equals(apiId))
+                      !existingKey.getApplication().equals(application.getId()) ||
+                        (existingKey.getApplication().equals(application.getId()) && existingKey.getSubscriptions().contains(subscription.getId()))
+                  );
+            } catch (TechnicalException ex) {
+                String message = String.format(
+                  "An error occurs while checking if API Key can be created for api %s and application %s",
+                  subscription.getApi(),
+                  subscription.getApplication()
                 );
-        } catch (TechnicalException ex) {
-            String message = String.format(
-                "An error occurs while checking if API Key can be created for api %s and application %s",
-                apiId,
-                applicationId
-            );
-            LOGGER.error(message, ex);
-            throw new TechnicalManagementException(message, ex);
+                LOGGER.error(message, ex);
+                throw new TechnicalManagementException(message, ex);
+            }
         }
+        // TODO what if we are running in SHARED mode ?
+        return false;
+    }
+
+    @Override
+    public boolean canCreate(String apiKey, String apiId, String applicationId) {
+        SubscriptionQuery query = new SubscriptionQuery();
+        query.setApi(apiId);
+        query.setApplication(applicationId);
+
+        SubscriptionEntity subscription = subscriptionService.search(query)
+          .stream()
+          .findFirst()
+          .orElseThrow(() -> new TechnicalManagementException("Unable to find subscription for API " + apiId + " and application " + applicationId));
+
+        return canCreate(apiKey, subscription);
     }
 
     @Override
@@ -456,7 +478,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
 
             // If API key is not shared
             // The expired date must be <= than the subscription end date
-            if (apiKeyEntity.getApplication().getApiKeyMode() != "SHARED") {
+            if (!apiKeyEntity.getApplication().getApiKeyMode().equals(ApiKeyMode.SHARED.name())) {
                 SubscriptionEntity subscription = subscriptionService.findById(key.getSubscriptions().get(0));
                 if (
                         subscription.getEndingAt() != null && (expirationDate == null || subscription.getEndingAt().compareTo(expirationDate) < 0)
@@ -514,13 +536,20 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
             .expireBefore(query.getExpireBefore());
     }
 
+    // TODO: refactor to avoid querying repositories
     private void createAuditLog(ApiKey key, ApiKey previousApiKey, ApiKey.AuditEvent event, Date eventDate) {
-        Map<Audit.AuditProperties, String> properties = new LinkedHashMap<>();
-        properties.put(API_KEY, key.getKey());
-        properties.put(API, key.getApi());
-        properties.put(APPLICATION, key.getApplication());
+        ApplicationEntity application = applicationService.findById(GraviteeContext.getCurrentEnvironment(), key.getApplication());
 
-        auditService.createApiAuditLog(key.getApi(), properties, event, eventDate, previousApiKey, key);
+        if (!application.getApiKeyMode().equals(ApiKeyMode.SHARED.name())) {
+            SubscriptionEntity subscription = subscriptionService.findByIdIn(key.getSubscriptions()).get(0);
+
+            Map<Audit.AuditProperties, String> properties = new LinkedHashMap<>();
+            properties.put(API_KEY, key.getKey());
+            properties.put(API, subscription.getApi());
+            properties.put(APPLICATION, key.getApplication());
+
+            auditService.createApiAuditLog(subscription.getApi(), properties, event, eventDate, previousApiKey, key);
+        }
     }
 
     private void triggerNotifierService(ApiHook apiHook, ApiKey key) {
@@ -528,11 +557,15 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
     }
 
     private void triggerNotifierService(ApiHook apiHook, ApiKey key, NotificationParamsBuilder paramsBuilder) {
-        PlanEntity plan = planService.findById(key.getPlan());
         ApplicationEntity application = applicationService.findById(GraviteeContext.getCurrentEnvironment(), key.getApplication());
-        ApiModelEntity api = apiService.findByIdForTemplates(key.getApi());
-        PrimaryOwnerEntity owner = application.getPrimaryOwner();
-        Map<String, Object> params = paramsBuilder.application(application).plan(plan).api(api).owner(owner).apikey(key).build();
-        notifierService.trigger(apiHook, api.getId(), params);
+
+        if (!application.getApiKeyMode().equals(ApiKeyMode.SHARED.name())) {
+            SubscriptionEntity subscription = subscriptionService.findByIdIn(key.getSubscriptions()).get(0);
+            PlanEntity plan = planService.findById(subscription.getPlan());
+            ApiModelEntity api = apiService.findByIdForTemplates(subscription.getApi());
+            PrimaryOwnerEntity owner = application.getPrimaryOwner();
+            Map<String, Object> params = paramsBuilder.application(application).plan(plan).api(api).owner(owner).apikey(key).build();
+            notifierService.trigger(apiHook, api.getId(), params);
+        }
     }
 }
