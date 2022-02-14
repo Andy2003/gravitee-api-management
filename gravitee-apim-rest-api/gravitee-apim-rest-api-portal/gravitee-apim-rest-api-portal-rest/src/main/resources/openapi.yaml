@@ -4902,7 +4902,7 @@ components:
         key:
           type: string
         application:
-          type: string
+          $ref: '#/components/schemas/Application'
         subscriptions:
           type: array
           items:
