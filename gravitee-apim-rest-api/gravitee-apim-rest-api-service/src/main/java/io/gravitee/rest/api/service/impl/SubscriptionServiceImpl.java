@@ -136,6 +136,12 @@ public class SubscriptionServiceImpl extends AbstractService implements Subscrip
     }
 
     @Override
+    public List<SubscriptionEntity> findByIdIn(Collection<String> subscriptionIds) {
+        // TODO
+        return Collections.emptyList();
+    }
+
+    @Override
     public Collection<SubscriptionEntity> findByApplicationAndPlan(String application, String plan) {
         logger.debug("Find subscriptions by application {} and plan {}", application, plan);
 
@@ -967,7 +973,7 @@ public class SubscriptionServiceImpl extends AbstractService implements Subscrip
                 List<SubscriptionEntity> filteredSubscriptions = apiKeyService
                     .findByKey(query.getApiKey())
                     .stream()
-                    .map(apiKey -> findById(apiKey.getSubscription()))
+                    .flatMap(apiKey -> findByIdIn(apiKey.getSubscriptions().stream().map(SubscriptionEntity::getId).collect(toList())).stream())
                     .filter(
                         subscription ->
                             query.matchesApi(subscription.getApi()) &&
@@ -1054,11 +1060,6 @@ public class SubscriptionServiceImpl extends AbstractService implements Subscrip
             subscription.setPlan(transferSubscription.getPlan());
 
             subscription = subscriptionRepository.update(subscription);
-            final List<ApiKeyEntity> apiKeys = apiKeyService.findBySubscription(subscription.getId());
-            for (final ApiKeyEntity apiKey : apiKeys) {
-                apiKey.setPlan(transferSubscription.getPlan());
-                apiKeyService.update(apiKey);
-            }
 
             final ApplicationEntity application = applicationService.findById(
                 GraviteeContext.getCurrentEnvironment(),

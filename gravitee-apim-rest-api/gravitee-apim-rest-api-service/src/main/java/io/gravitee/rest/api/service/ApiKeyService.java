@@ -38,11 +38,7 @@ public interface ApiKeyService {
 
     void revoke(ApiKeyEntity apiKeyEntity, boolean notify);
 
-    void revoke(String apiKey, String apiId, boolean notify);
-
     ApiKeyEntity reactivate(ApiKeyEntity apiKeyEntity);
-
-    ApiKeyEntity reactivate(String apiKey, String apiId);
 
     List<ApiKeyEntity> findBySubscription(String subscription);
 
@@ -57,8 +53,6 @@ public interface ApiKeyService {
     ApiKeyEntity update(ApiKeyEntity apiKeyEntity);
 
     ApiKeyEntity updateDaysToExpirationOnLastNotification(ApiKeyEntity apiKeyEntity, Integer value);
-
-    ApiKeyEntity updateDaysToExpirationOnLastNotification(String apiKey, String apiId, Integer value);
 
     boolean canCreate(String apiKey, String apiId, String applicationId);
 

@@ -125,8 +125,9 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
             // Get previously generated keys to set their expiration date
             Set<ApiKey> oldKeys = apiKeyRepository.findBySubscription(subscription);
             for (ApiKey oldKey : oldKeys) {
-                if (!oldKey.equals(newApiKey) && !convert(oldKey).isExpired()) {
-                    setExpiration(expirationDate, oldKey);
+                ApiKeyEntity oldKeyEntity = convert(oldKey);
+                if (!oldKey.equals(newApiKey) && !oldKeyEntity.isExpired()) {
+                    setExpiration(expirationDate, oldKeyEntity, oldKey);
                 }
             }
 
@@ -177,7 +178,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
 
         ApiKey apiKey = new ApiKey();
         apiKey.setId(UuidString.generateRandom());
-        apiKey.setSubscription(subscription);
+        apiKey.setSubscriptions(List.of(subscription));
         apiKey.setApplication(subscriptionEntity.getApplication());
         apiKey.setPlan(subscriptionEntity.getPlan());
         apiKey.setCreatedAt(new Date());
@@ -205,18 +206,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
 
     @Override
     public void revoke(ApiKeyEntity apiKeyEntity, boolean notify) {
-        revoke(apiKeyEntity.getKey(), apiKeyEntity.getApi(), notify);
-    }
-
-    @Override
-    public void revoke(String apiKey, String apiId, boolean notify) {
-        try {
-            ApiKey key = apiKeyRepository.findByKeyAndApi(apiKey, apiId).orElseThrow(() -> new ApiKeyNotFoundException());
-            revoke(key, notify);
-        } catch (TechnicalException e) {
-            LOGGER.error("An error occurs while trying to revoke an api key", e);
-            throw new TechnicalManagementException("An error occurs while trying to revoke an api key", e);
-        }
+        revoke(apiKeyEntity.getId(), notify);
     }
 
     private void revoke(ApiKey key, boolean notify) throws TechnicalException {
@@ -242,31 +232,30 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
 
     @Override
     public ApiKeyEntity reactivate(ApiKeyEntity apiKeyEntity) {
-        return reactivate(apiKeyEntity.getKey(), apiKeyEntity.getApi());
-    }
-
-    @Override
-    public ApiKeyEntity reactivate(String apiKey, String apiId) {
         try {
-            ApiKey key = apiKeyRepository.findByKeyAndApi(apiKey, apiId).orElseThrow(() -> new ApiKeyNotFoundException());
+            ApiKey key = apiKeyRepository.findById(apiKeyEntity.getId()).orElseThrow(() -> new ApiKeyNotFoundException());
 
-            LOGGER.debug("Reactivate API Key id {} for API {}", key.getId(), apiId);
+            LOGGER.debug("Reactivate API Key id {}", apiKeyEntity.getId());
 
             if (!key.isRevoked() && !convert(key).isExpired()) {
                 throw new ApiKeyAlreadyActivatedException();
-            }
-
-            // Get the subscription to get ending date and set key expiration date.
-            SubscriptionEntity subscription = subscriptionService.findById(key.getSubscription());
-            if (subscription.getStatus() != SubscriptionStatus.PAUSED && subscription.getStatus() != SubscriptionStatus.ACCEPTED) {
-                throw new SubscriptionNotActiveException(subscription);
             }
 
             ApiKey previousApiKey = new ApiKey(key);
             key.setRevoked(false);
             key.setUpdatedAt(new Date());
             key.setRevokedAt(null);
-            key.setExpireAt(subscription.getEndingAt());
+
+            // If this is not a shared API key,
+            // Get the subscription to get ending date and set key expiration date
+            if (apiKeyEntity.getApplication().getApiKeyMode() != "SHARED") {
+                SubscriptionEntity subscription = subscriptionService.findById(key.getSubscriptions().get(0));
+                if (subscription.getStatus() != SubscriptionStatus.PAUSED && subscription.getStatus() != SubscriptionStatus.ACCEPTED) {
+                    throw new SubscriptionNotActiveException(subscription);
+                }
+                key.setExpireAt(subscription.getEndingAt());
+            }
+
 
             ApiKey updated = apiKeyRepository.update(key);
 
@@ -289,7 +278,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
     @Override
     public ApiKeyEntity findById(String keyId) {
         try {
-            return apiKeyRepository.findById(keyId).map(ApiKeyServiceImpl::convert).orElseThrow(() -> new ApiKeyNotFoundException());
+            return apiKeyRepository.findById(keyId).map(this::convert).orElseThrow(() -> new ApiKeyNotFoundException());
         } catch (TechnicalException e) {
             String message = String.format("An error occurs while trying to find a key with id %s", keyId);
             LOGGER.error(message, e);
@@ -301,7 +290,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
     public List<ApiKeyEntity> findByKey(String apiKey) {
         try {
             LOGGER.debug("Find API Keys by key");
-            return apiKeyRepository.findByKey(apiKey).stream().map(ApiKeyServiceImpl::convert).collect(Collectors.toList());
+            return apiKeyRepository.findByKey(apiKey).stream().map(this::convert).collect(Collectors.toList());
         } catch (TechnicalException e) {
             LOGGER.error("An error occurs while finding API keys", e);
             throw new TechnicalManagementException("An error occurs while finding API keys", e);
@@ -317,7 +306,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
             Set<ApiKey> keys = apiKeyRepository.findBySubscription(subscriptionEntity.getId());
             return keys
                 .stream()
-                .map(ApiKeyServiceImpl::convert)
+                .map(this::convert)
                 .sorted((o1, o2) -> o2.getCreatedAt().compareTo(o1.getCreatedAt()))
                 .collect(Collectors.toList());
         } catch (TechnicalException ex) {
@@ -346,15 +335,14 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
         try {
             LOGGER.debug("Update API Key with id {}", apiKeyEntity.getId());
             ApiKey key = apiKeyRepository
-                .findByKeyAndApi(apiKeyEntity.getKey(), apiKeyEntity.getApi())
+                .findById(apiKeyEntity.getId())
                 .orElseThrow(() -> new ApiKeyNotFoundException());
 
             checkApiKeyExpired(key);
 
             key.setPaused(apiKeyEntity.isPaused());
-            key.setPlan(apiKeyEntity.getPlan());
             if (apiKeyEntity.getExpireAt() != null) {
-                setExpiration(apiKeyEntity.getExpireAt(), key);
+                setExpiration(apiKeyEntity.getExpireAt(), apiKeyEntity, key);
             } else {
                 key.setUpdatedAt(new Date());
                 apiKeyRepository.update(key);
@@ -372,14 +360,9 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
 
     @Override
     public ApiKeyEntity updateDaysToExpirationOnLastNotification(ApiKeyEntity apiKeyEntity, Integer value) {
-        return updateDaysToExpirationOnLastNotification(apiKeyEntity.getKey(), apiKeyEntity.getApi(), value);
-    }
-
-    @Override
-    public ApiKeyEntity updateDaysToExpirationOnLastNotification(String apiKey, String apiId, Integer value) {
         try {
             return apiKeyRepository
-                .findByKeyAndApi(apiKey, apiId)
+                .findById(apiKeyEntity.getId())
                 .map(
                     dbApiKey -> {
                         dbApiKey.setDaysToExpirationOnLastNotification(value);
@@ -394,7 +377,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
                         }
                     }
                 )
-                .map(ApiKeyServiceImpl::convert)
+                .map(this::convert)
                 .orElseThrow(ApiKeyNotFoundException::new);
         } catch (TechnicalException ex) {
             LOGGER.error("An error occurs while trying to update apiKey", ex);
@@ -432,7 +415,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
 
             ApiKeyCriteria.Builder builder = toApiKeyCriteriaBuilder(query);
 
-            return apiKeyRepository.findByCriteria(builder.build()).stream().map(ApiKeyServiceImpl::convert).collect(Collectors.toList());
+            return apiKeyRepository.findByCriteria(builder.build()).stream().map(this::convert).collect(Collectors.toList());
         } catch (TechnicalException ex) {
             LOGGER.error("An error occurs while trying to search api keys: {}", query, ex);
             throw new TechnicalManagementException(String.format("An error occurs while trying to search api keys: {}", query), ex);
@@ -461,7 +444,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
         */
     }
 
-    private void setExpiration(Date expirationDate, ApiKey key) throws TechnicalException {
+    private void setExpiration(Date expirationDate, ApiKeyEntity apiKeyEntity, ApiKey key) throws TechnicalException {
         final Date now = new Date();
 
         if (now.after(expirationDate)) {
@@ -470,12 +453,16 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
 
         key.setUpdatedAt(now);
         if (!key.isRevoked()) {
-            //the expired date must be <= than the subscription end date
-            SubscriptionEntity subscription = subscriptionService.findById(key.getSubscription());
-            if (
-                subscription.getEndingAt() != null && (expirationDate == null || subscription.getEndingAt().compareTo(expirationDate) < 0)
-            ) {
-                expirationDate = subscription.getEndingAt();
+
+            // If API key is not shared
+            // The expired date must be <= than the subscription end date
+            if (apiKeyEntity.getApplication().getApiKeyMode() != "SHARED") {
+                SubscriptionEntity subscription = subscriptionService.findById(key.getSubscriptions().get(0));
+                if (
+                        subscription.getEndingAt() != null && (expirationDate == null || subscription.getEndingAt().compareTo(expirationDate) < 0)
+                ) {
+                    expirationDate = subscription.getEndingAt();
+                }
             }
 
             ApiKey oldkey = new ApiKey(key);
@@ -497,7 +484,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
         }
     }
 
-    private static ApiKeyEntity convert(ApiKey apiKey) {
+    private ApiKeyEntity convert(ApiKey apiKey) {
         ApiKeyEntity apiKeyEntity = new ApiKeyEntity();
 
         apiKeyEntity.setId(apiKey.getId());
@@ -508,11 +495,11 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
         apiKeyEntity.setRevoked(apiKey.isRevoked());
         apiKeyEntity.setRevokedAt(apiKey.getRevokedAt());
         apiKeyEntity.setUpdatedAt(apiKey.getUpdatedAt());
-        apiKeyEntity.setSubscription(apiKey.getSubscription());
-        apiKeyEntity.setApplication(apiKey.getApplication());
-        apiKeyEntity.setPlan(apiKey.getPlan());
+
+        apiKeyEntity.setSubscriptions(subscriptionService.findByIdIn(apiKey.getSubscriptions()));
+        apiKeyEntity.setApplication(applicationService.findById("TODO", apiKey.getApplication()));
+
         apiKeyEntity.setDaysToExpirationOnLastNotification(apiKey.getDaysToExpirationOnLastNotification());
-        apiKeyEntity.setApi(apiKey.getApi());
 
         return apiKeyEntity;
     }

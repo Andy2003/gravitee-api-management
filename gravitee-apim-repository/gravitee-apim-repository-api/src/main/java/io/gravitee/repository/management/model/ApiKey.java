@@ -17,6 +17,7 @@ package io.gravitee.repository.management.model;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -44,24 +45,14 @@ public class ApiKey implements Serializable {
     private String key;
 
     /**
-     * The subscription for which the Api Key is generated
+     * The subscriptions for which the Api Key is generated
      */
-    private String subscription;
+    private List<String> subscriptions;
 
     /**
      * The application used to make the subscription
      */
     private String application;
-
-    /**
-     * The subscribed plan
-     */
-    private String plan;
-
-    /**
-     * The api on which this api key is used
-     */
-    private String api;
 
     /**
      * Expiration date (end date) of the Api Key
@@ -103,7 +94,7 @@ public class ApiKey implements Serializable {
     public ApiKey(ApiKey cloned) {
         this.id = cloned.id;
         this.key = cloned.key;
-        this.subscription = cloned.subscription;
+        this.subscriptions = cloned.subscriptions;
         this.application = cloned.application;
         this.plan = cloned.plan;
         this.expireAt = cloned.expireAt;
@@ -180,12 +171,12 @@ public class ApiKey implements Serializable {
         this.updatedAt = updatedAt;
     }
 
-    public String getSubscription() {
-        return subscription;
+    public List<String> getSubscriptions() {
+        return subscriptions;
     }
 
-    public void setSubscription(String subscription) {
-        this.subscription = subscription;
+    public void setSubscriptions(List<String> subscriptions) {
+        this.subscriptions = subscriptions;
     }
 
     public boolean isPaused() {

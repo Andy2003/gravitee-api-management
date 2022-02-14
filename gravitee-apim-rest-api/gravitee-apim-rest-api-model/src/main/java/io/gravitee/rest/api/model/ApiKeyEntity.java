@@ -16,7 +16,10 @@
 package io.gravitee.rest.api.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.gravitee.rest.api.model.settings.Application;
+
 import java.util.Date;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -29,13 +32,9 @@ public class ApiKeyEntity {
 
     private String key;
 
-    private String subscription;
+    private List<SubscriptionEntity> subscriptions;
 
-    private String application;
-
-    private String plan;
-
-    private String api;
+    private ApplicationEntity application;
 
     @JsonProperty("expire_at")
     private Date expireAt;
@@ -66,30 +65,6 @@ public class ApiKeyEntity {
 
     public void setKey(String key) {
         this.key = key;
-    }
-
-    public String getSubscription() {
-        return subscription;
-    }
-
-    public void setSubscription(String subscription) {
-        this.subscription = subscription;
-    }
-
-    public String getApplication() {
-        return application;
-    }
-
-    public void setApplication(String application) {
-        this.application = application;
-    }
-
-    public String getPlan() {
-        return plan;
-    }
-
-    public void setPlan(String plan) {
-        this.plan = plan;
     }
 
     public Date getExpireAt() {
@@ -164,12 +139,20 @@ public class ApiKeyEntity {
         this.id = id;
     }
 
-    public String getApi() {
-        return api;
+    public List<SubscriptionEntity> getSubscriptions() {
+        return subscriptions;
     }
 
-    public void setApi(String api) {
-        this.api = api;
+    public void setSubscriptions(List<SubscriptionEntity> subscriptions) {
+        this.subscriptions = subscriptions;
+    }
+
+    public ApplicationEntity getApplication() {
+        return application;
+    }
+
+    public void setApplication(ApplicationEntity application) {
+        this.application = application;
     }
 
     @Override
