@@ -257,7 +257,6 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
                 key.setExpireAt(subscription.getEndingAt());
             }
 
-
             ApiKey updated = apiKeyRepository.update(key);
 
             // Audit
@@ -335,9 +334,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
     public ApiKeyEntity update(ApiKeyEntity apiKeyEntity) {
         try {
             LOGGER.debug("Update API Key with id {}", apiKeyEntity.getId());
-            ApiKey key = apiKeyRepository
-                .findById(apiKeyEntity.getId())
-                .orElseThrow(() -> new ApiKeyNotFoundException());
+            ApiKey key = apiKeyRepository.findById(apiKeyEntity.getId()).orElseThrow(() -> new ApiKeyNotFoundException());
 
             checkApiKeyExpired(key);
 
@@ -395,18 +392,21 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
         if (!application.getApiKeyMode().equals(ApiKeyMode.SHARED.name())) {
             try {
                 return apiKeyRepository
-                  .findByKey(apiKey)
-                  .stream()
-                  .noneMatch(
-                    existingKey ->
-                      !existingKey.getApplication().equals(application.getId()) ||
-                        (existingKey.getApplication().equals(application.getId()) && existingKey.getSubscriptions().contains(subscription.getId()))
-                  );
+                    .findByKey(apiKey)
+                    .stream()
+                    .noneMatch(
+                        existingKey ->
+                            !existingKey.getApplication().equals(application.getId()) ||
+                            (
+                                existingKey.getApplication().equals(application.getId()) &&
+                                existingKey.getSubscriptions().contains(subscription.getId())
+                            )
+                    );
             } catch (TechnicalException ex) {
                 String message = String.format(
-                  "An error occurs while checking if API Key can be created for api %s and application %s",
-                  subscription.getApi(),
-                  subscription.getApplication()
+                    "An error occurs while checking if API Key can be created for api %s and application %s",
+                    subscription.getApi(),
+                    subscription.getApplication()
                 );
                 LOGGER.error(message, ex);
                 throw new TechnicalManagementException(message, ex);
@@ -422,10 +422,13 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
         query.setApi(apiId);
         query.setApplication(applicationId);
 
-        SubscriptionEntity subscription = subscriptionService.search(query)
-          .stream()
-          .findFirst()
-          .orElseThrow(() -> new TechnicalManagementException("Unable to find subscription for API " + apiId + " and application " + applicationId));
+        SubscriptionEntity subscription = subscriptionService
+            .search(query)
+            .stream()
+            .findFirst()
+            .orElseThrow(
+                () -> new TechnicalManagementException("Unable to find subscription for API " + apiId + " and application " + applicationId)
+            );
 
         return canCreate(apiKey, subscription);
     }
@@ -475,13 +478,13 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
 
         key.setUpdatedAt(now);
         if (!key.isRevoked()) {
-
             // If API key is not shared
             // The expired date must be <= than the subscription end date
             if (!apiKeyEntity.getApplication().getApiKeyMode().equals(ApiKeyMode.SHARED.name())) {
                 SubscriptionEntity subscription = subscriptionService.findById(key.getSubscriptions().get(0));
                 if (
-                        subscription.getEndingAt() != null && (expirationDate == null || subscription.getEndingAt().compareTo(expirationDate) < 0)
+                    subscription.getEndingAt() != null &&
+                    (expirationDate == null || subscription.getEndingAt().compareTo(expirationDate) < 0)
                 ) {
                     expirationDate = subscription.getEndingAt();
                 }

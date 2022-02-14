@@ -271,7 +271,6 @@ public class ApiKeyServiceTest {
         when(apiKeyEntity.getApplication()).thenReturn(application);
         when(apiKeyEntity.getSubscriptions()).thenReturn(List.of(subscription));
 
-
         // Stub
         when(apiKeyRepository.findById(API_KEY)).thenReturn(Optional.of(apiKey));
         when(subscriptionService.findByIdIn(apiKey.getSubscriptions())).thenReturn(List.of(subscription));
@@ -365,7 +364,6 @@ public class ApiKeyServiceTest {
         apiKey.setCreatedAt(new Date());
         apiKey.setApplication(APPLICATION_ID);
         apiKey.setExpireAt(new Date(System.currentTimeMillis() - 10000));
-
 
         SubscriptionEntity subscriptionEntity = new SubscriptionEntity();
         subscription.setId(SUBSCRIPTION_ID);

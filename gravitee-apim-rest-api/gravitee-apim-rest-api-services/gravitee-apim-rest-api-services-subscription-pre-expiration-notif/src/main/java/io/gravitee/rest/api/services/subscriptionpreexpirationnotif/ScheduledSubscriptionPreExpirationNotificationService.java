@@ -130,8 +130,17 @@ public class ScheduledSubscriptionPreExpirationNotificationService extends Abstr
                             apiKey.getDaysToExpirationOnLastNotification() == null ||
                             apiKey.getDaysToExpirationOnLastNotification() > daysToExpiration
                     )
-                    // Remove the ones related to a subscription for which an email was just sent
-                    .filter(apiKey -> !notifiedSubscriptionIds.contains(apiKey.getSubscription()))
+                    .peek(
+                        apiKey -> {
+                            // Remove the ones related to a subscription for which an email was just sent
+                            List<SubscriptionEntity> toNotify = apiKey
+                                .getSubscriptions()
+                                .stream()
+                                .filter(subscription -> !notifiedSubscriptionIds.contains(subscription.getId()))
+                                .collect(Collectors.toList());
+                            apiKey.setSubscriptions(toNotify);
+                        }
+                    )
                     .forEach(apiKey -> notificationApiKeyExpiration(daysToExpiration, apiKey));
             }
         );
@@ -140,13 +149,20 @@ public class ScheduledSubscriptionPreExpirationNotificationService extends Abstr
     }
 
     private ApiKeyEntity notificationApiKeyExpiration(Integer daysToExpiration, ApiKeyEntity apiKey) {
-        SubscriptionEntity subscription = subscriptionService.findById(apiKey.getSubscription());
-        ApiEntity api = apiService.findById(subscription.getApi());
-        PlanEntity plan = planService.findById(subscription.getPlan());
-        ApplicationEntity application = applicationService.findById(GraviteeContext.getCurrentEnvironment(), subscription.getApplication());
-
-        findEmailsToNotify(subscription, application)
-            .forEach(email -> this.sendEmail(email, daysToExpiration, api, plan, application, apiKey));
+        apiKey
+            .getSubscriptions()
+            .forEach(
+                subscription -> {
+                    ApiEntity api = apiService.findById(subscription.getApi());
+                    PlanEntity plan = planService.findById(subscription.getPlan());
+                    ApplicationEntity application = applicationService.findById(
+                        GraviteeContext.getCurrentEnvironment(),
+                        subscription.getApplication()
+                    );
+                    findEmailsToNotify(subscription, application)
+                        .forEach(email -> this.sendEmail(email, daysToExpiration, api, plan, application, apiKey));
+                }
+            );
 
         return apiKeyService.updateDaysToExpirationOnLastNotification(apiKey, daysToExpiration);
     }

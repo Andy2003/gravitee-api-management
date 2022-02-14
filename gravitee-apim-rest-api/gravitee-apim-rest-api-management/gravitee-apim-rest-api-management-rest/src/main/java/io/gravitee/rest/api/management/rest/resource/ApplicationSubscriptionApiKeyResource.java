@@ -68,7 +68,7 @@ public class ApplicationSubscriptionApiKeyResource extends AbstractResource {
     @Permissions({ @Permission(value = RolePermission.APPLICATION_SUBSCRIPTION, acls = RolePermissionAction.DELETE) })
     public Response revokeApiKeyForApplicationSubscription() {
         ApiKeyEntity apiKeyEntity = apiKeyService.findById(apikey);
-        if (apiKeyEntity.getSubscription() != null && !subscription.equals(apiKeyEntity.getSubscription())) {
+        if (apiKeyEntity.getSubscriptions().stream().map(SubscriptionEntity::getId).noneMatch(subscription::equals)) {
             return Response.status(Response.Status.BAD_REQUEST).entity("'key' parameter does not correspond to the subscription").build();
         }
 

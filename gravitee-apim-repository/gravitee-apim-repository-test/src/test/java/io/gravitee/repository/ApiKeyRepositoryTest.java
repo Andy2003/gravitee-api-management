@@ -40,7 +40,6 @@ public class ApiKeyRepositoryTest extends AbstractRepositoryTest {
 
         ApiKey apiKey = new ApiKey();
         apiKey.setId(id);
-        apiKey.setApi("api1");
         apiKey.setKey("apiKey");
         apiKey.setCreatedAt(new Date());
         apiKey.setRevoked(true);
@@ -58,7 +57,6 @@ public class ApiKeyRepositoryTest extends AbstractRepositoryTest {
         assertNotNull("ApiKey not found", keyFound);
 
         assertEquals("Key value saved doesn't match", apiKey.getKey(), keyFound.getKey());
-        assertEquals("Key api saved doesn't match", apiKey.getApi(), keyFound.getApi());
         assertTrue("Key expiration doesn't match", compareDate(apiKey.getExpireAt(), keyFound.getExpireAt()));
         assertEquals("Key paused status doesn't match", apiKey.isPaused(), keyFound.isPaused());
         assertEquals("Key revoked status doesn't match", apiKey.isRevoked(), keyFound.isRevoked());
@@ -77,7 +75,7 @@ public class ApiKeyRepositoryTest extends AbstractRepositoryTest {
 
         ApiKey keyFound = optional.get();
         assertNotNull("ApiKey not found", keyFound);
-        assertNotNull("No subscription relative to the key", keyFound.getSubscription());
+        assertNotNull("No subscriptions relative to the key", keyFound.getSubscriptions());
         assertTrue("Key paused status doesn't match", keyFound.isPaused());
         assertTrue("Key revoked status doesn't match", keyFound.isRevoked());
         assertEquals(

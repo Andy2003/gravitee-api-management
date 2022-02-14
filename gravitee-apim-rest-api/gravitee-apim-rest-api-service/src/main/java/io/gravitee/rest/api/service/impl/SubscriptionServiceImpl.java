@@ -973,7 +973,9 @@ public class SubscriptionServiceImpl extends AbstractService implements Subscrip
                 List<SubscriptionEntity> filteredSubscriptions = apiKeyService
                     .findByKey(query.getApiKey())
                     .stream()
-                    .flatMap(apiKey -> findByIdIn(apiKey.getSubscriptions().stream().map(SubscriptionEntity::getId).collect(toList())).stream())
+                    .flatMap(
+                        apiKey -> findByIdIn(apiKey.getSubscriptions().stream().map(SubscriptionEntity::getId).collect(toList())).stream()
+                    )
                     .filter(
                         subscription ->
                             query.matchesApi(subscription.getApi()) &&

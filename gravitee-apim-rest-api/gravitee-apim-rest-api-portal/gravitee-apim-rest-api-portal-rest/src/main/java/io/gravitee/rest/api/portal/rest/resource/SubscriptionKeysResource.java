@@ -75,7 +75,7 @@ public class SubscriptionKeysResource extends AbstractResource {
             hasPermission(RolePermission.API_SUBSCRIPTION, subscriptionEntity.getApi(), RolePermissionAction.UPDATE)
         ) {
             ApiKeyEntity apiKeyEntity = apiKeyService.findByKeyAndApi(apiKey, subscriptionEntity.getApi());
-            if (apiKeyEntity.getSubscription() != null && !subscriptionId.equals(apiKeyEntity.getSubscription())) {
+            if (apiKeyEntity.getSubscriptions().stream().map(SubscriptionEntity::getId).noneMatch(subscriptionId::equals)) {
                 return Response
                     .status(Response.Status.BAD_REQUEST)
                     .entity("'keyId' parameter does not correspond to the subscription")

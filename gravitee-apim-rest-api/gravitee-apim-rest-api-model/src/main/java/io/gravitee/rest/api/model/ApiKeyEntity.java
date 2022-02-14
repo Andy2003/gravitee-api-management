@@ -17,7 +17,6 @@ package io.gravitee.rest.api.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.gravitee.rest.api.model.settings.Application;
-
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;

@@ -27,6 +27,7 @@ import io.gravitee.rest.api.model.SubscriptionEntity;
 import io.gravitee.rest.api.model.permissions.RolePermission;
 import io.gravitee.rest.api.model.permissions.RolePermissionAction;
 import io.gravitee.rest.api.portal.rest.model.Key;
+import java.util.List;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import org.junit.Before;
@@ -55,9 +56,12 @@ public class SubscriptionKeysResourceTest extends AbstractResourceTest {
     public void init() {
         resetAllMocks();
 
+        SubscriptionEntity subscription = new SubscriptionEntity();
+        subscription.setId(SUBSCRIPTION);
+
         apiKeyEntity = new ApiKeyEntity();
         apiKeyEntity.setKey(KEY);
-        apiKeyEntity.setSubscription(SUBSCRIPTION);
+        apiKeyEntity.setSubscriptions(List.of(subscription));
 
         doReturn(apiKeyEntity).when(apiKeyService).renew(SUBSCRIPTION);
         doReturn(apiKeyEntity).when(apiKeyService).findByKeyAndApi(KEY, API);
@@ -140,9 +144,12 @@ public class SubscriptionKeysResourceTest extends AbstractResourceTest {
 
     @Test
     public void shouldNotRevokeKey() {
+        SubscriptionEntity subscriptionEntity = new SubscriptionEntity();
+        subscriptionEntity.setId(ANOTHER_SUBSCRIPTION);
+
         apiKeyEntity = new ApiKeyEntity();
         apiKeyEntity.setKey(KEY);
-        apiKeyEntity.setSubscription(ANOTHER_SUBSCRIPTION);
+        apiKeyEntity.setSubscriptions(List.of(subscriptionEntity));
 
         doReturn(apiKeyEntity).when(apiKeyService).findByKeyAndApi(KEY, API);
 

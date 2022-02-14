@@ -16,8 +16,13 @@
 package io.gravitee.rest.api.portal.rest.mapper;
 
 import io.gravitee.rest.api.model.ApiKeyEntity;
+import io.gravitee.rest.api.model.SubscriptionEntity;
 import io.gravitee.rest.api.portal.rest.model.Key;
+import io.gravitee.rest.api.portal.rest.model.Subscription;
 import java.time.ZoneOffset;
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 /**
@@ -31,12 +36,10 @@ public class KeyMapper {
     public Key convert(ApiKeyEntity apiKeyEntity) {
         final Key keyItem = new Key();
         keyItem.setId(apiKeyEntity.getId());
-        keyItem.setApi(apiKeyEntity.getApi());
-        keyItem.setApplication(apiKeyEntity.getApplication());
+        keyItem.setSubscriptions(convert(apiKeyEntity.getSubscriptions()));
         keyItem.setCreatedAt(apiKeyEntity.getCreatedAt().toInstant().atOffset(ZoneOffset.UTC));
         keyItem.setKey(apiKeyEntity.getKey());
         keyItem.setPaused(apiKeyEntity.isPaused());
-        keyItem.setPlan(apiKeyEntity.getPlan());
         keyItem.setRevoked(apiKeyEntity.isRevoked());
         if (apiKeyEntity.isRevoked()) {
             keyItem.setRevokedAt(apiKeyEntity.getRevokedAt().toInstant().atOffset(ZoneOffset.UTC));
@@ -46,5 +49,17 @@ public class KeyMapper {
             keyItem.setExpireAt(apiKeyEntity.getExpireAt().toInstant().atOffset(ZoneOffset.UTC));
         }
         return keyItem;
+    }
+
+    public List<Subscription> convert(Collection<SubscriptionEntity> subscriptionEntities) {
+        return subscriptionEntities.stream().map(this::convert).collect(Collectors.toList());
+    }
+
+    public Subscription convert(SubscriptionEntity subscriptionEntity) {
+        Subscription subscription = new Subscription();
+        subscription.setApi(subscriptionEntity.getApi());
+        subscription.setApplication(subscriptionEntity.getApplication());
+        subscription.setPlan(subscription.getPlan());
+        return subscription;
     }
 }

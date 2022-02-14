@@ -85,8 +85,7 @@ public class ApiKeyRepositoryMock extends AbstractRepositoryMock<ApiKeyRepositor
         when(apiKey.getId()).thenReturn("id-of-apikey-1");
         when(apiKey.getKey()).thenReturn("apiKey");
         when(apiKey.getExpireAt()).thenReturn(parse("11/02/2016"));
-        when(apiKey.getSubscription()).thenReturn("subscription1");
-        when(apiKey.getApi()).thenReturn("api1");
+        when(apiKey.getSubscriptions()).thenReturn(List.of("subscription1"));
         when(apiKey.isRevoked()).thenReturn(true);
         when(apiKey.isPaused()).thenReturn(true);
         return apiKey;
@@ -97,8 +96,7 @@ public class ApiKeyRepositoryMock extends AbstractRepositoryMock<ApiKeyRepositor
         when(apiKey.getId()).thenReturn("id-of-apikey-2");
         when(apiKey.getKey()).thenReturn("d449098d-8c31-4275-ad59-8dd707865a34");
         when(apiKey.getExpireAt()).thenReturn(parse("11/02/2016"));
-        when(apiKey.getSubscription()).thenReturn("subscription2");
-        when(apiKey.getApi()).thenReturn("api2");
+        when(apiKey.getSubscriptions()).thenReturn(List.of("subscription2"));
         when(apiKey.isRevoked()).thenReturn(false);
         when(apiKey.isPaused()).thenReturn(false);
         return apiKey;

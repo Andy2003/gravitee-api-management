@@ -18,9 +18,12 @@ package io.gravitee.rest.api.portal.rest.mapper;
 import static org.junit.Assert.*;
 
 import io.gravitee.rest.api.model.ApiKeyEntity;
+import io.gravitee.rest.api.model.ApplicationEntity;
+import io.gravitee.rest.api.model.SubscriptionEntity;
 import io.gravitee.rest.api.portal.rest.model.Key;
 import java.time.Instant;
 import java.util.Date;
+import java.util.List;
 import org.junit.Test;
 
 /**
@@ -44,29 +47,31 @@ public class KeyMapperTest {
     @Test
     public void should_convert() {
         ApiKeyEntity apiKeyEntity = new ApiKeyEntity();
-        apiKeyEntity.setApplication(APPLICATION);
+        ApplicationEntity application = new ApplicationEntity();
+        SubscriptionEntity subscription = new SubscriptionEntity();
+        subscription.setId(SUBSCRIPTION);
+        application.setId(APPLICATION);
+        apiKeyEntity.setApplication(application);
         apiKeyEntity.setCreatedAt(nowDate);
         apiKeyEntity.setExpireAt(nowDate);
         apiKeyEntity.setKey(KEY);
         apiKeyEntity.setPaused(false);
-        apiKeyEntity.setPlan(PLAN);
         apiKeyEntity.setRevoked(false);
         apiKeyEntity.setRevokedAt(nowDate);
-        apiKeyEntity.setSubscription(SUBSCRIPTION);
+        apiKeyEntity.setSubscriptions(List.of(subscription));
         apiKeyEntity.setUpdatedAt(nowDate);
-        apiKeyEntity.setApi(API);
         apiKeyEntity.setId(ID);
 
         Key key = keyMapper.convert(apiKeyEntity);
 
         assertNotNull(key);
-        assertEquals(API, key.getApi());
+        //assertEquals(API, key.getApi());
         assertEquals(APPLICATION, key.getApplication());
         assertEquals(now.toEpochMilli(), key.getCreatedAt().toInstant().toEpochMilli());
         assertEquals(KEY, key.getKey());
         assertEquals(ID, key.getId());
         assertEquals(Boolean.FALSE, key.getPaused());
-        assertEquals(PLAN, key.getPlan());
+        //assertEquals(PLAN, key.getPlan());
         assertEquals(Boolean.FALSE, key.getRevoked());
         assertNull(key.getRevokedAt());
     }
