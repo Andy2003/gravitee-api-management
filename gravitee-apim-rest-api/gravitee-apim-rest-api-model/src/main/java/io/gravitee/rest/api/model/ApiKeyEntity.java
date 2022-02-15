@@ -20,6 +20,10 @@ import io.gravitee.rest.api.model.settings.Application;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.*;
 
 /**
  * @author David BRASSELY (david.brassely at graviteesource.com)
@@ -147,7 +151,11 @@ public class ApiKeyEntity {
     }
 
     public boolean hasSubscription(String subscriptionId) {
-        return subscriptions.stream().map(SubscriptionEntity::getId).anyMatch(subscriptionId::equals);
+        return getSubscriptionIds().stream().anyMatch(subscriptionId::equals);
+    }
+
+    public Set<String> getSubscriptionIds() {
+        return subscriptions.stream().map(SubscriptionEntity::getId).collect(toSet());
     }
 
     public ApplicationEntity getApplication() {
