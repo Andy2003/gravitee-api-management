@@ -15,6 +15,7 @@
  */
 package io.gravitee.rest.api.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.gravitee.rest.api.model.settings.Application;
 import java.util.Date;
@@ -150,20 +151,21 @@ public class ApiKeyEntity {
         this.subscriptions = subscriptions;
     }
 
-    public boolean hasSubscription(String subscriptionId) {
-        return getSubscriptionIds().stream().anyMatch(subscriptionId::equals);
-    }
-
-    public Set<String> getSubscriptionIds() {
-        return subscriptions.stream().map(SubscriptionEntity::getId).collect(toSet());
-    }
-
     public ApplicationEntity getApplication() {
         return application;
     }
 
     public void setApplication(ApplicationEntity application) {
         this.application = application;
+    }
+
+    @JsonIgnore
+    public Set<String> getSubscriptionIds() {
+        return subscriptions.stream().map(SubscriptionEntity::getId).collect(toSet());
+    }
+
+    public boolean hasSubscription(String subscriptionId) {
+        return getSubscriptionIds().stream().anyMatch(subscriptionId::equals);
     }
 
     @Override
