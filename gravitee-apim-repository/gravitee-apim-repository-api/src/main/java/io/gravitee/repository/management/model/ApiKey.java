@@ -16,6 +16,7 @@
 package io.gravitee.repository.management.model;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -47,7 +48,7 @@ public class ApiKey implements Serializable {
     /**
      * The subscriptions for which the Api Key is generated
      */
-    private List<String> subscriptions;
+    private List<String> subscriptions = new ArrayList<>();
 
     /**
      * The application used to make the subscription

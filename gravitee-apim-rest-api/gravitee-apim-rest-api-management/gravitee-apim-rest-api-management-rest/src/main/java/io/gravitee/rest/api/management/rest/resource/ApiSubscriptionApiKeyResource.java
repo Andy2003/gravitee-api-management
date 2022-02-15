@@ -71,7 +71,7 @@ public class ApiSubscriptionApiKeyResource extends AbstractResource {
     public Response reactivateApiKeyForApiSubscription() {
         ApiKeyEntity apiKeyEntity = apiKeyService.findById(apikey);
 
-        if (apiKeyEntity.getSubscriptions().stream().map(SubscriptionEntity::getId).noneMatch(subscription::equals)) {
+        if (!apiKeyEntity.hasSubscription(subscription)) {
             return Response.status(Response.Status.BAD_REQUEST).entity("api key in path does not correspond to the subscription").build();
         }
 
@@ -86,7 +86,7 @@ public class ApiSubscriptionApiKeyResource extends AbstractResource {
     public Response revokeApiKeyForApiSubscription() {
         ApiKeyEntity apiKeyEntity = apiKeyService.findById(apikey);
 
-        if (apiKeyEntity.getSubscriptions().stream().map(SubscriptionEntity::getId).noneMatch(subscription::equals)) {
+        if (!apiKeyEntity.hasSubscription(subscription)) {
             return Response.status(Response.Status.BAD_REQUEST).entity("api key in path does not correspond to the subscription").build();
         }
 

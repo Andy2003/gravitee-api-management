@@ -65,13 +65,11 @@ public class KeyMapperTest {
         Key key = keyMapper.convert(apiKeyEntity);
 
         assertNotNull(key);
-        //assertEquals(API, key.getApi());
         assertEquals(APPLICATION, key.getApplication());
         assertEquals(now.toEpochMilli(), key.getCreatedAt().toInstant().toEpochMilli());
         assertEquals(KEY, key.getKey());
         assertEquals(ID, key.getId());
         assertEquals(Boolean.FALSE, key.getPaused());
-        //assertEquals(PLAN, key.getPlan());
         assertEquals(Boolean.FALSE, key.getRevoked());
         assertNull(key.getRevokedAt());
     }

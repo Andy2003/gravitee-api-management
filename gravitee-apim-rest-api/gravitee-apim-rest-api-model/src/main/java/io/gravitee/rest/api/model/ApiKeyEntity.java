@@ -146,6 +146,10 @@ public class ApiKeyEntity {
         this.subscriptions = subscriptions;
     }
 
+    public boolean hasSubscription(String subscriptionId) {
+        return subscriptions.stream().map(SubscriptionEntity::getId).anyMatch(subscriptionId::equals);
+    }
+
     public ApplicationEntity getApplication() {
         return application;
     }
