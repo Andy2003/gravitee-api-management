@@ -105,15 +105,15 @@ public class ScheduledSubscriptionPreExpirationNotificationService extends Abstr
 
         notificationDays.forEach(
             daysToExpiration -> {
-                Set<String> notifiedSubscriptionIds = notifyForSubscriptionsExpiration(now, daysToExpiration);
-                notifyForApiKeyExpiration(now, daysToExpiration, notifiedSubscriptionIds);
+                Set<String> notifiedSubscriptionIds = notifySubscriptionsExpiration(now, daysToExpiration);
+                notifyApiKeysExpiration(now, daysToExpiration, notifiedSubscriptionIds);
             }
         );
 
         logger.debug("Subscription Pre Expiration Notification #{} ended at {}", counter.get(), Instant.now().toString());
     }
 
-    private void notifyForApiKeyExpiration(Instant now, Integer daysToExpiration, Set<String> notifiedSubscriptionIds) {
+    private void notifyApiKeysExpiration(Instant now, Integer daysToExpiration, Set<String> notifiedSubscriptionIds) {
         Collection<ApiKeyEntity> apiKeyExpirationsToNotify = findApiKeyExpirationsToNotify(now, daysToExpiration);
         apiKeyExpirationsToNotify
             .stream()
@@ -131,10 +131,10 @@ public class ScheduledSubscriptionPreExpirationNotificationService extends Abstr
                     return !subscriptionIds.isEmpty();
                 }
             )
-            .forEach(apiKey -> notificationApiKeyExpiration(daysToExpiration, apiKey));
+            .forEach(apiKey -> notifyApiKeyExpiration(daysToExpiration, apiKey));
     }
 
-    private Set<String> notifyForSubscriptionsExpiration(Instant now, Integer daysToExpiration) {
+    private Set<String> notifySubscriptionsExpiration(Instant now, Integer daysToExpiration) {
         Collection<SubscriptionEntity> subscriptionExpirationsToNotify = findSubscriptionExpirationsToNotify(now, daysToExpiration);
 
         findSubscriptionExpirationsToNotify(now, daysToExpiration)
@@ -145,12 +145,14 @@ public class ScheduledSubscriptionPreExpirationNotificationService extends Abstr
                     subscription.getDaysToExpirationOnLastNotification() == null ||
                     subscription.getDaysToExpirationOnLastNotification() > daysToExpiration
             )
-            .forEach(subscription -> notifySubscription(daysToExpiration, subscription));
+            .forEach(
+              subscription -> notifySubscriptionExpiration(daysToExpiration, subscription)
+            );
 
         return subscriptionExpirationsToNotify.stream().map(SubscriptionEntity::getId).collect(Collectors.toSet());
     }
 
-    private ApiKeyEntity notificationApiKeyExpiration(Integer daysToExpiration, ApiKeyEntity apiKey) {
+    private void notifyApiKeyExpiration(Integer daysToExpiration, ApiKeyEntity apiKey) {
         ApplicationEntity application = apiKey.getApplication();
 
         apiKey
@@ -164,17 +166,15 @@ public class ScheduledSubscriptionPreExpirationNotificationService extends Abstr
 
                     findEmailsToNotify(subscription, application)
                         .forEach(
-                            email -> {
-                                this.sendEmail(email, daysToExpiration, api, plan, application, apiKey);
-                            }
+                            email -> this.sendEmail(email, daysToExpiration, api, plan, application, apiKey)
                         );
                 }
             );
 
-        return apiKeyService.updateDaysToExpirationOnLastNotification(apiKey, daysToExpiration);
+        apiKeyService.updateDaysToExpirationOnLastNotification(apiKey, daysToExpiration);
     }
 
-    private SubscriptionEntity notifySubscription(Integer daysToExpiration, SubscriptionEntity subscription) {
+    private void notifySubscriptionExpiration(Integer daysToExpiration, SubscriptionEntity subscription) {
         ApiEntity api = apiService.findById(subscription.getApi());
         PlanEntity plan = planService.findById(subscription.getPlan());
 
@@ -183,7 +183,7 @@ public class ScheduledSubscriptionPreExpirationNotificationService extends Abstr
         findEmailsToNotify(subscription, application)
             .forEach(email -> this.sendEmail(email, daysToExpiration, api, plan, application, null));
 
-        return subscriptionService.updateDaysToExpirationOnLastNotification(subscription.getId(), daysToExpiration);
+        subscriptionService.updateDaysToExpirationOnLastNotification(subscription.getId(), daysToExpiration);
     }
 
     @VisibleForTesting
