@@ -124,7 +124,7 @@ public class ScheduledSubscriptionPreExpirationNotificationService extends Abstr
                 apiKey.getDaysToExpirationOnLastNotification() > daysToExpiration
           )
           .filter(apiKey -> {
-              // If a notification has just been sent for any of the subscriptions attached to this key, do not notify again
+              // Notify only if one of the subscriptions attached to this key did not receive a notification yet.
               Set<String> subscriptionIds = new HashSet<>(apiKey.getSubscriptionIds());
               subscriptionIds.removeAll(notifiedSubscriptionIds);
               return !subscriptionIds.isEmpty();
