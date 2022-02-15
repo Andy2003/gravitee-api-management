@@ -28,6 +28,7 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface ApiKeyMongoRepository extends MongoRepository<ApiKeyMongo, String>, ApiKeyMongoRepositoryCustom {
+    @Query("{ 'subscriptions': ?0 }")
     List<ApiKeyMongo> findBySubscription(String subscription);
 
     List<ApiKeyMongo> findByPlan(String plan);

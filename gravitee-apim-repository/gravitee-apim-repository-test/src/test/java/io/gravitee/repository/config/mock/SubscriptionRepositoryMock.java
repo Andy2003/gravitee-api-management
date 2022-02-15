@@ -83,6 +83,7 @@ public class SubscriptionRepositoryMock extends AbstractRepositoryMock<Subscript
         when(subscriptionRepository.findById("unknown-sub")).thenReturn(empty());
         when(subscriptionRepository.findById("sub2")).thenReturn(empty());
         when(subscriptionRepository.update(sub1)).thenReturn(sub1);
+        when(subscriptionRepository.findByIdIn(argThat(ids -> ids.contains("sub1")))).thenReturn(Set.of(sub1));
 
         when(subscriptionRepository.update(argThat(o -> o == null || o.getId().equals("unknown")))).thenThrow(new IllegalStateException());
 

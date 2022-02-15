@@ -17,6 +17,7 @@ package io.gravitee.repository.mongodb.management.internal.model;
 
 import java.util.Date;
 import java.util.Objects;
+import java.util.Set;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -42,9 +43,14 @@ public class ApiKeyMongo {
     private String key;
 
     /**
-     * The subscription for which the Api Key is generated
+     * The subscriptions for which the Api Key is generated
+     *
+     * The collection should contain more than one element only if the subscriptions are made
+     * for an application where the SHARED mode has been configured for API Key subscriptions
+     *
+     * @see io.gravitee.repository.management.model.ApiKeyMode
      */
-    private String subscription;
+    private Set<String> subscriptions;
 
     /**
      * The application used to make the subscription
@@ -104,12 +110,12 @@ public class ApiKeyMongo {
         this.key = key;
     }
 
-    public String getSubscription() {
-        return subscription;
+    public Set<String> getSubscriptions() {
+        return subscriptions;
     }
 
-    public void setSubscription(String subscription) {
-        this.subscription = subscription;
+    public void setSubscriptions(Set<String> subscriptions) {
+        this.subscriptions = subscriptions;
     }
 
     public String getApplication() {

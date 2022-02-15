@@ -119,13 +119,10 @@ public class SubscriptionServiceImpl extends AbstractService implements Subscrip
         try {
             logger.debug("Find subscription by id : {}", subscription);
 
-            Optional<Subscription> optSubscription = subscriptionRepository.findById(subscription);
-
-            if (!optSubscription.isPresent()) {
-                throw new SubscriptionNotFoundException(subscription);
-            }
-
-            return convert(optSubscription.get());
+            return subscriptionRepository
+                .findById(subscription)
+                .map(this::convert)
+                .orElseThrow(() -> new SubscriptionNotFoundException(subscription));
         } catch (TechnicalException ex) {
             logger.error("An error occurs while trying to find a subscription using its ID: {}", subscription, ex);
             throw new TechnicalManagementException(
@@ -137,8 +134,15 @@ public class SubscriptionServiceImpl extends AbstractService implements Subscrip
 
     @Override
     public List<SubscriptionEntity> findByIdIn(Collection<String> subscriptionIds) {
-        // TODO
-        return Collections.emptyList();
+        try {
+            return subscriptionRepository.findByIdIn(subscriptionIds).stream().map(this::convert).collect(toList());
+        } catch (TechnicalException e) {
+            logger.error("An error occurs while trying to find subscriptions using IDs [{}]", subscriptionIds, e);
+            throw new TechnicalManagementException(
+                String.format("An error occurs while trying to find subscriptions using IDs [%s]", subscriptionIds),
+                e
+            );
+        }
     }
 
     @Override
@@ -499,12 +503,10 @@ public class SubscriptionServiceImpl extends AbstractService implements Subscrip
         try {
             logger.debug("Subscription {} processed by {}", processSubscription.getId(), userId);
 
-            Optional<Subscription> optSubscription = subscriptionRepository.findById(processSubscription.getId());
-            if (!optSubscription.isPresent()) {
-                throw new SubscriptionNotFoundException(processSubscription.getId());
-            }
+            Subscription subscription = subscriptionRepository
+                .findById(processSubscription.getId())
+                .orElseThrow(() -> new SubscriptionNotFoundException(processSubscription.getId()));
 
-            Subscription subscription = optSubscription.get();
             Subscription previousSubscription = new Subscription(subscription);
             if (subscription.getStatus() != Subscription.Status.PENDING) {
                 throw new SubscriptionAlreadyProcessedException(subscription.getId());

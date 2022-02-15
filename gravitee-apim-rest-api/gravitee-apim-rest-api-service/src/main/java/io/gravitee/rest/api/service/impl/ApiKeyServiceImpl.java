@@ -387,7 +387,8 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
     public boolean canCreate(String apiKey, SubscriptionEntity subscription) {
         LOGGER.debug("Check if an API Key can be created for subscription {}", subscription.getId());
 
-        ApplicationEntity application = applicationService.findById("TODO", subscription.getApplication());
+        // TODO: make environment a parameter
+        ApplicationEntity application = applicationService.findById(GraviteeContext.getCurrentEnvironment(), subscription.getApplication());
 
         if (!application.getApiKeyMode().equals(ApiKeyMode.SHARED.name())) {
             try {
@@ -522,7 +523,9 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
         apiKeyEntity.setUpdatedAt(apiKey.getUpdatedAt());
 
         apiKeyEntity.setSubscriptions(subscriptionService.findByIdIn(apiKey.getSubscriptions()));
-        apiKeyEntity.setApplication(applicationService.findById("TODO", apiKey.getApplication()));
+
+        // TODO: make environment a parameter
+        apiKeyEntity.setApplication(applicationService.findById(GraviteeContext.getCurrentEnvironment(), apiKey.getApplication()));
 
         apiKeyEntity.setDaysToExpirationOnLastNotification(apiKey.getDaysToExpirationOnLastNotification());
 

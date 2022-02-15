@@ -28,7 +28,9 @@ import io.gravitee.repository.management.api.SubscriptionRepository;
 import io.gravitee.repository.management.api.search.Order;
 import io.gravitee.repository.management.api.search.Pageable;
 import io.gravitee.repository.management.api.search.SubscriptionCriteria;
+import io.gravitee.repository.management.model.Group;
 import io.gravitee.repository.management.model.Subscription;
+import java.sql.PreparedStatement;
 import java.sql.Types;
 import java.util.*;
 import org.slf4j.Logger;
@@ -204,5 +206,28 @@ public class JdbcSubscriptionRepository extends JdbcAbstractCrudRepository<Subsc
             throw new IllegalStateException("Failed to find subscription records", ex);
         }
         return getResultAsPage(pageable, subscriptions);
+    }
+
+    @Override
+    public Set<Subscription> findByIdIn(Collection<String> ids) throws TechnicalException {
+        if (isEmpty(ids)) {
+            return Set.of();
+        }
+
+        try {
+            StringBuilder queryBuilder = new StringBuilder(getOrm().getSelectAllSql());
+            getOrm().buildInCondition(true, queryBuilder, "id", ids);
+
+            List<Subscription> subscriptions = jdbcTemplate.query(
+                queryBuilder.toString(),
+                (PreparedStatement ps) -> getOrm().setArguments(ps, ids, 1),
+                getOrm().getRowMapper()
+            );
+
+            return new HashSet<>(subscriptions);
+        } catch (final Exception e) {
+            LOGGER.error("Failed to find subscriptions by ids", e);
+            throw new TechnicalException("Failed to find subscriptions by ids", e);
+        }
     }
 }

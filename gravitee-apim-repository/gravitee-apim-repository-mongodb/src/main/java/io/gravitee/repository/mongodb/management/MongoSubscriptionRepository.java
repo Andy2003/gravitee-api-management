@@ -25,6 +25,7 @@ import io.gravitee.repository.management.model.Subscription;
 import io.gravitee.repository.mongodb.management.internal.model.SubscriptionMongo;
 import io.gravitee.repository.mongodb.management.internal.plan.SubscriptionMongoRepository;
 import io.gravitee.repository.mongodb.management.mapper.GraviteeMapper;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -116,5 +117,10 @@ public class MongoSubscriptionRepository implements SubscriptionRepository {
     @Override
     public Set<Subscription> findAll() throws TechnicalException {
         return internalSubscriptionRepository.findAll().stream().map(this::map).collect(Collectors.toSet());
+    }
+
+    @Override
+    public Set<Subscription> findByIdIn(Collection<String> ids) throws TechnicalException {
+        return internalSubscriptionRepository.findByIdIn(ids).stream().map(this::map).collect(Collectors.toSet());
     }
 }
