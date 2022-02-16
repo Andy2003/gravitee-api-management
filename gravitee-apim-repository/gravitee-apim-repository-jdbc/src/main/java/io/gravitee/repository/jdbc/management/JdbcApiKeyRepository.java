@@ -80,13 +80,13 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
             StringBuilder query = new StringBuilder(getOrm().getSelectAllSql()).append(" k ");
 
             if (!isEmpty(criteria.getPlans())) {
-                query.append("join ")
-                  .append(" join ")
-                  .append(KEY_SUBSCRIPTION)
-                  .append(" ks on ks.key = k.id")
-                  .append(" join ")
-                  .append(SUBSCRIPTION)
-                  .append(" ks on ks.key = k.id");
+                query
+                    .append("join ")
+                    .append(KEY_SUBSCRIPTION)
+                    .append(" ks on ks.key = k.id")
+                    .append(" join ")
+                    .append(SUBSCRIPTION)
+                    .append(" ks on ks.key = k.id");
             }
 
             boolean first = true;
