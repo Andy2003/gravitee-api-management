@@ -16,6 +16,7 @@
 package io.gravitee.repository.jdbc.management;
 
 import static io.gravitee.repository.jdbc.common.AbstractJdbcRepositoryConfiguration.escapeReservedWord;
+import static org.springframework.util.CollectionUtils.*;
 
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.jdbc.orm.JdbcObjectMapper;
@@ -28,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.CollectionUtils;
 
 /**
  *
@@ -39,10 +41,12 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
     private static final Logger LOGGER = LoggerFactory.getLogger(JdbcApiKeyRepository.class);
 
     private final String KEY_SUBSCRIPTION;
+    private final String SUBSCRIPTION;
 
     JdbcApiKeyRepository(@Value("${management.jdbc.prefix:}") String tablePrefix) {
         super(tablePrefix, "keys");
         KEY_SUBSCRIPTION = getTableNameFor("key_subscription");
+        SUBSCRIPTION = getTableNameFor("subscriptions");
     }
 
     @Override
@@ -68,53 +72,62 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
     }
 
     @Override
-    public List<ApiKey> findByCriteria(ApiKeyCriteria akc) throws TechnicalException {
-        LOGGER.debug("JdbcApiKeyRepository.findByCriteria({})", akc);
+    public List<ApiKey> findByCriteria(ApiKeyCriteria criteria) throws TechnicalException {
+        LOGGER.debug("JdbcApiKeyRepository.findByCriteria({})", criteria);
         try {
             List<Object> args = new ArrayList<>();
-            StringBuilder query = new StringBuilder(getOrm().getSelectAllSql()).append(" ");
+
+            StringBuilder query = new StringBuilder(getOrm().getSelectAllSql()).append(" k ");
+
+            if (!isEmpty(criteria.getPlans())) {
+                query.append("join ")
+                  .append(" join ")
+                  .append(KEY_SUBSCRIPTION)
+                  .append(" ks on ks.key = k.id")
+                  .append(" join ")
+                  .append(SUBSCRIPTION)
+                  .append(" ks on ks.key = k.id");
+            }
 
             boolean first = true;
-            if (!akc.isIncludeRevoked()) {
+
+            if (!criteria.isIncludeRevoked()) {
                 first = addClause(first, query);
-                query.append(" ( revoked = ? ) ");
+                query.append(" ( k.revoked = ? ) ");
                 args.add(false);
             }
-            if ((akc.getPlans() != null) && !akc.getPlans().isEmpty()) {
-                first = addClause(first, query);
-                query.append(" ( ").append(escapeReservedWord("plan")).append(" in ( ");
-                boolean subFirst = true;
-                for (String plan : akc.getPlans()) {
-                    if (!subFirst) {
-                        query.append(", ");
-                    }
-                    subFirst = false;
-                    query.append(" ?");
-                    args.add(plan);
-                }
-                query.append(" ) ) ");
+
+            if (!isEmpty(criteria.getPlans())) {
+                first = getOrm().buildInCondition(first, query, "ks.plan", criteria.getPlans());
+                args.add(criteria.getPlans());
             }
-            if (akc.getFrom() > 0) {
+
+            if (criteria.getFrom() > 0) {
                 first = addClause(first, query);
-                query.append(" ( updated_at >= ? ) ");
-                args.add(new Date(akc.getFrom()));
+                query.append(" ( k.updated_at >= ? ) ");
+                args.add(new Date(criteria.getFrom()));
             }
-            if (akc.getTo() > 0) {
+
+            if (criteria.getTo() > 0) {
                 first = addClause(first, query);
-                query.append(" ( updated_at <= ? ) ");
-                args.add(new Date(akc.getTo()));
+                query.append(" ( k.updated_at <= ? ) ");
+                args.add(new Date(criteria.getTo()));
             }
-            if (akc.getExpireAfter() > 0) {
+
+            if (criteria.getExpireAfter() > 0) {
                 first = addClause(first, query);
-                query.append(" ( expire_at >= ? ) ");
-                args.add(new Date(akc.getExpireAfter()));
+                query.append(" ( k.expire_at >= ? ) ");
+                args.add(new Date(criteria.getExpireAfter()));
             }
-            if (akc.getExpireBefore() > 0) {
+
+            if (criteria.getExpireBefore() > 0) {
                 addClause(first, query);
-                query.append(" ( expire_at <= ? ) ");
-                args.add(new Date(akc.getExpireBefore()));
+                query.append(" ( k.expire_at <= ? ) ");
+                args.add(new Date(criteria.getExpireBefore()));
             }
+
             query.append(" order by updated_at desc ");
+
             return jdbcTemplate.query(query.toString(), getOrm().getRowMapper(), args.toArray());
         } catch (final Exception ex) {
             LOGGER.error("Failed to find api keys by criteria:", ex);
@@ -201,7 +214,9 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
                 .append(" join ")
                 .append(KEY_SUBSCRIPTION)
                 .append(" ks on ks.key = k.id")
-                .append(" join subscription s on ks.subscription = s.id")
+                .append(" join ")
+                .append(SUBSCRIPTION)
+                .append(" s on ks.subscription = s.id ")
                 .append(" where k.key = ?")
                 .append(" and s.api = ?")
                 .toString();
