@@ -32,7 +32,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.stereotype.Repository;
-import org.springframework.util.CollectionUtils;
 
 /**
  *
@@ -75,14 +74,16 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
     }
 
     @Override
-    public ApiKey update(ApiKey item) throws TechnicalException {
+    public ApiKey update(ApiKey apiKey) throws TechnicalException {
         try {
-            ApiKey update = super.update(item);
-            storeSubscriptions(update);
+            ApiKey update = super.update(apiKey);
+            if (!isEmpty(apiKey.getSubscriptions())) {
+                storeSubscriptions(apiKey);
+            }
             return update;
         } catch (Exception e) {
-            LOGGER.error("Failed to update api key " + item.getId(), e);
-            throw new TechnicalException("Failed to update api key " + item.getId(), e);
+            LOGGER.error("Failed to update api key " + apiKey.getId(), e);
+            throw new TechnicalException("Failed to update api key " + apiKey.getId(), e);
         }
     }
 
@@ -263,6 +264,8 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
 
     private void storeSubscriptions(ApiKey key) {
         List<String> subscriptions = key.getSubscriptions();
+
+        jdbcTemplate.update("delete from " + KEY_SUBSCRIPTION + " where key = ?", key.getId());
 
         jdbcTemplate.batchUpdate(
             "insert into " + KEY_SUBSCRIPTION + " ( key, subscription ) values ( ?, ? )",
