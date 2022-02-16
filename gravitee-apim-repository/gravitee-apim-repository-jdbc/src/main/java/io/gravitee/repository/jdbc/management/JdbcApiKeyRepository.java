@@ -86,7 +86,7 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
                     .append(" ks on ks.key = k.id")
                     .append(" join ")
                     .append(SUBSCRIPTION)
-                    .append(" ks on ks.key = k.id");
+                    .append(" s on ks.subscription = s.id");
             }
 
             boolean first = true;
