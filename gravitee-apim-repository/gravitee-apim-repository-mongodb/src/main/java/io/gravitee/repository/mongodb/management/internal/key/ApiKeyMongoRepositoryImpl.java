@@ -19,16 +19,14 @@ import static com.mongodb.client.model.Aggregates.*;
 import static com.mongodb.client.model.Filters.*;
 
 import com.mongodb.client.AggregateIterable;
+import com.mongodb.client.model.Sorts;
 import io.gravitee.repository.management.api.search.ApiKeyCriteria;
 import io.gravitee.repository.mongodb.management.internal.model.ApiKeyMongo;
 import java.util.*;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
 
 /**
  * @author David BRASSELY (david.brassely at graviteesource.com)
@@ -41,39 +39,40 @@ public class ApiKeyMongoRepositoryImpl implements ApiKeyMongoRepositoryCustom {
 
     @Override
     public List<ApiKeyMongo> search(ApiKeyCriteria filter) {
-        Query query = new Query();
+        List<Bson> pipeline = new ArrayList<>();
+
+        pipeline.add(lookup("subscriptions", "subscriptions", "_id", "sub"));
 
         if (!filter.isIncludeRevoked()) {
-            query.addCriteria(Criteria.where("revoked").is(false));
+            pipeline.add(match(eq("key", false)));
         }
 
         if (filter.getPlans() != null) {
-            query.addCriteria(Criteria.where("plan").in(filter.getPlans()));
+            pipeline.add(match(in("plan", filter.getPlans())));
         }
 
         // set range query
         if (filter.getFrom() != 0 && filter.getTo() != 0) {
-            query.addCriteria(Criteria.where("updatedAt").gte(new Date(filter.getFrom())).lt(new Date(filter.getTo())));
+            pipeline.add(match(and(gte("updatedAt", new Date(filter.getFrom())), lte("updatedAt", new Date(filter.getTo())))));
         }
 
-        if (filter.getExpireAfter() > 0 || filter.getExpireBefore() > 0) {
-            // Need to mutualize the instantiation of this filter otherwise mongo driver is throwing an error, when
-            // using multiple `Criteria.where("expireAt").xxx` with the same query
-            Criteria expireAtCriteria = Criteria.where("expireAt");
-
-            if (filter.getExpireAfter() > 0) {
-                expireAtCriteria = expireAtCriteria.gte(new Date(filter.getExpireAfter()));
-            }
-            if (filter.getExpireBefore() > 0) {
-                expireAtCriteria = expireAtCriteria.lte(new Date(filter.getExpireBefore()));
-            }
-
-            query.addCriteria(expireAtCriteria);
+        if (filter.getExpireAfter() > 0 && filter.getExpireBefore() > 0) {
+            pipeline.add(
+                match(and(gte("expireAt", new Date(filter.getExpireAfter())), lte("expireAt", new Date(filter.getExpireBefore()))))
+            );
+        } else if (filter.getExpireAfter() > 0) {
+            pipeline.add(match(gte("expireAt", new Date(filter.getExpireAfter()))));
+        } else if (filter.getExpireBefore() > 0) {
+            pipeline.add(match(lte("expireAt", new Date(filter.getExpireBefore()))));
         }
 
-        query.with(Sort.by(Sort.Direction.DESC, "updatedAt"));
+        pipeline.add(sort(Sorts.descending("updatedAt")));
 
-        return mongoTemplate.find(query, ApiKeyMongo.class);
+        AggregateIterable<Document> aggregate = mongoTemplate
+            .getCollection(mongoTemplate.getCollectionName(ApiKeyMongo.class))
+            .aggregate(pipeline);
+
+        return getListFromAggregate(aggregate);
     }
 
     @Override
