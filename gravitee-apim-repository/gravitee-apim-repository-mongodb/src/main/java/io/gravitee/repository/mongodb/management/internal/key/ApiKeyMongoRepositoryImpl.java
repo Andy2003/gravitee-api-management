@@ -42,13 +42,14 @@ public class ApiKeyMongoRepositoryImpl implements ApiKeyMongoRepositoryCustom {
         List<Bson> pipeline = new ArrayList<>();
 
         pipeline.add(lookup("subscriptions", "subscriptions", "_id", "sub"));
+        pipeline.add(unwind("$sub"));
 
         if (!filter.isIncludeRevoked()) {
             pipeline.add(match(eq("key", false)));
         }
 
         if (filter.getPlans() != null) {
-            pipeline.add(match(in("plan", filter.getPlans())));
+            pipeline.add(match(in("sub.plan", filter.getPlans())));
         }
 
         // set range query
