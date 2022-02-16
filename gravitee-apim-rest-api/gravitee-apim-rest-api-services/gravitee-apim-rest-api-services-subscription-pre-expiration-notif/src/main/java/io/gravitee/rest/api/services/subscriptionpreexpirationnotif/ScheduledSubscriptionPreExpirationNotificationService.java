@@ -145,9 +145,7 @@ public class ScheduledSubscriptionPreExpirationNotificationService extends Abstr
                     subscription.getDaysToExpirationOnLastNotification() == null ||
                     subscription.getDaysToExpirationOnLastNotification() > daysToExpiration
             )
-            .forEach(
-              subscription -> notifySubscriptionExpiration(daysToExpiration, subscription)
-            );
+            .forEach(subscription -> notifySubscriptionExpiration(daysToExpiration, subscription));
 
         return subscriptionExpirationsToNotify.stream().map(SubscriptionEntity::getId).collect(Collectors.toSet());
     }
@@ -165,9 +163,7 @@ public class ScheduledSubscriptionPreExpirationNotificationService extends Abstr
                     PlanEntity plan = planService.findById(subscription.getPlan());
 
                     findEmailsToNotify(subscription, application)
-                        .forEach(
-                            email -> this.sendEmail(email, daysToExpiration, api, plan, application, apiKey)
-                        );
+                        .forEach(email -> this.sendEmail(email, daysToExpiration, api, plan, application, apiKey));
                 }
             );
 

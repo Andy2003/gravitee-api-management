@@ -15,11 +15,20 @@
  */
 package io.gravitee.repository.mongodb.management.internal.key;
 
-import io.gravitee.common.data.domain.Page;
+import static com.mongodb.client.model.Aggregates.*;
+import static com.mongodb.client.model.Filters.*;
+
+import com.mongodb.client.AggregateIterable;
+import com.mongodb.client.MongoCursor;
+import com.mongodb.client.model.Aggregates;
+import com.mongodb.client.model.Filters;
 import io.gravitee.repository.management.api.search.ApiKeyCriteria;
+import io.gravitee.repository.management.model.ApiKey;
 import io.gravitee.repository.mongodb.management.internal.model.ApiKeyMongo;
-import java.util.Date;
-import java.util.List;
+import io.gravitee.repository.mongodb.management.internal.model.RatingMongo;
+import java.util.*;
+import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -70,5 +79,49 @@ public class ApiKeyMongoRepositoryImpl implements ApiKeyMongoRepositoryCustom {
         query.with(Sort.by(Sort.Direction.DESC, "updatedAt"));
 
         return mongoTemplate.find(query, ApiKeyMongo.class);
+    }
+
+    @Override
+    public List<ApiKeyMongo> findByKeyAndApi(String key, String api) {
+        List<Bson> pipeline = List.of(
+            lookup("subscriptions", "subscriptions", "_id", "sub"),
+            unwind("$sub"),
+            match(eq("key", key)),
+            match(eq("sub.api", api))
+        );
+
+        AggregateIterable<Document> aggregate = mongoTemplate
+            .getCollection(mongoTemplate.getCollectionName(ApiKeyMongo.class))
+            .aggregate(pipeline);
+
+        return getListFromAggregate(aggregate);
+    }
+
+    @Override
+    public List<ApiKeyMongo> findByPlan(String plan) {
+        List<Bson> pipeline = List.of(lookup("subscriptions", "subscriptions", "_id", "sub"), unwind("$sub"), match(eq("sub.plan", plan)));
+
+        AggregateIterable<Document> aggregate = mongoTemplate
+            .getCollection(mongoTemplate.getCollectionName(ApiKeyMongo.class))
+            .aggregate(pipeline);
+
+        return getListFromAggregate(aggregate);
+    }
+
+    private List<ApiKeyMongo> getListFromAggregate(AggregateIterable<Document> aggregate) {
+        ArrayList<ApiKeyMongo> apiKeys = new ArrayList<>();
+        for (Document doc : aggregate) {
+            ApiKeyMongo apiKeyMongo = new ApiKeyMongo();
+            apiKeyMongo.setId(doc.getString("_id"));
+            apiKeyMongo.setKey(doc.getString("key"));
+            apiKeyMongo.setSubscriptions(new HashSet<>(doc.getList("subscriptions", String.class, List.of())));
+            apiKeyMongo.setApplication(doc.getString("application"));
+            apiKeyMongo.setCreatedAt(doc.getDate("createdAt"));
+            apiKeyMongo.setUpdatedAt(doc.getDate("updatedAt"));
+            apiKeyMongo.setRevoked(doc.getBoolean("revoked"));
+            apiKeyMongo.setPaused(doc.getBoolean("paused"));
+            apiKeys.add(apiKeyMongo);
+        }
+        return apiKeys;
     }
 }
