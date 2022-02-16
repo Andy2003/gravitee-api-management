@@ -105,15 +105,15 @@ public class ScheduledSubscriptionPreExpirationNotificationService extends Abstr
 
         notificationDays.forEach(
             daysToExpiration -> {
-                Set<String> notifiedSubscriptionIds = notifySubscriptionsExpiration(now, daysToExpiration);
-                notifyApiKeysExpiration(now, daysToExpiration, notifiedSubscriptionIds);
+                Set<String> notifiedSubscriptionIds = notifySubscriptionsExpirations(now, daysToExpiration);
+                notifyApiKeysExpirations(now, daysToExpiration, notifiedSubscriptionIds);
             }
         );
 
         logger.debug("Subscription Pre Expiration Notification #{} ended at {}", counter.get(), Instant.now().toString());
     }
 
-    private void notifyApiKeysExpiration(Instant now, Integer daysToExpiration, Set<String> notifiedSubscriptionIds) {
+    private void notifyApiKeysExpirations(Instant now, Integer daysToExpiration, Set<String> notifiedSubscriptionIds) {
         Collection<ApiKeyEntity> apiKeyExpirationsToNotify = findApiKeyExpirationsToNotify(now, daysToExpiration);
         apiKeyExpirationsToNotify
             .stream()
@@ -134,7 +134,7 @@ public class ScheduledSubscriptionPreExpirationNotificationService extends Abstr
             .forEach(apiKey -> notifyApiKeyExpiration(daysToExpiration, apiKey));
     }
 
-    private Set<String> notifySubscriptionsExpiration(Instant now, Integer daysToExpiration) {
+    private Set<String> notifySubscriptionsExpirations(Instant now, Integer daysToExpiration) {
         Collection<SubscriptionEntity> subscriptionExpirationsToNotify = findSubscriptionExpirationsToNotify(now, daysToExpiration);
 
         findSubscriptionExpirationsToNotify(now, daysToExpiration)
