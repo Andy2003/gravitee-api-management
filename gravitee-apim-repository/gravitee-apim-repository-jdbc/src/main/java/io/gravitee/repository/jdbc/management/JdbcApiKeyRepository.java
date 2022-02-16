@@ -23,11 +23,14 @@ import io.gravitee.repository.jdbc.orm.JdbcObjectMapper;
 import io.gravitee.repository.management.api.ApiKeyRepository;
 import io.gravitee.repository.management.api.search.ApiKeyCriteria;
 import io.gravitee.repository.management.model.ApiKey;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.sql.Types;
 import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.CollectionUtils;
 
@@ -69,6 +72,18 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
     @Override
     protected String getId(ApiKey item) {
         return item.getId();
+    }
+
+    @Override
+    public ApiKey update(ApiKey item) throws TechnicalException {
+        try {
+            ApiKey update = super.update(item);
+            storeSubscriptions(update);
+            return update;
+        } catch (Exception e) {
+            LOGGER.error("Failed to update api key " + item.getId(), e);
+            throw new TechnicalException("Failed to update api key " + item.getId(), e);
+        }
     }
 
     @Override
@@ -244,5 +259,25 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
             LOGGER.error("Failed to find api key by key and api", ex);
             throw new TechnicalException("Failed to find api key by key and api", ex);
         }
+    }
+
+    private void storeSubscriptions(ApiKey key) {
+        List<String> subscriptions = key.getSubscriptions();
+
+        jdbcTemplate.batchUpdate(
+            "insert into " + KEY_SUBSCRIPTION + " ( key, subscription ) values ( ?, ? )",
+            new BatchPreparedStatementSetter() {
+                @Override
+                public void setValues(PreparedStatement ps, int i) throws SQLException {
+                    ps.setString(1, key.getId());
+                    ps.setString(2, subscriptions.get(i));
+                }
+
+                @Override
+                public int getBatchSize() {
+                    return subscriptions.size();
+                }
+            }
+        );
     }
 }
