@@ -22,7 +22,6 @@ import static org.mockito.Mockito.*;
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.ApiKeyRepository;
 import io.gravitee.repository.management.model.ApiKey;
-import io.gravitee.repository.management.model.ApiKeyMode;
 import io.gravitee.repository.management.model.Audit;
 import io.gravitee.rest.api.model.*;
 import io.gravitee.rest.api.service.common.GraviteeContext;
@@ -265,7 +264,7 @@ public class ApiKeyServiceTest {
         subscription.setStatus(SubscriptionStatus.PAUSED);
 
         ApplicationEntity application = mock(ApplicationEntity.class);
-        when(application.getApiKeyMode()).thenReturn(ApiKeyMode.EXCLUSIVE.name());
+        when(application.getApiKeyMode()).thenReturn(io.gravitee.rest.api.model.ApiKeyMode.EXCLUSIVE);
 
         ApiKeyEntity apiKeyEntity = mock(ApiKeyEntity.class);
         when(apiKeyEntity.getApplication()).thenReturn(application);
@@ -305,7 +304,7 @@ public class ApiKeyServiceTest {
         subscription.setStatus(SubscriptionStatus.PAUSED);
 
         ApplicationEntity application = mock(ApplicationEntity.class);
-        when(application.getApiKeyMode()).thenReturn(ApiKeyMode.EXCLUSIVE.name());
+        when(application.getApiKeyMode()).thenReturn(io.gravitee.rest.api.model.ApiKeyMode.EXCLUSIVE);
 
         ApiKeyEntity apiKeyEntity = mock(ApiKeyEntity.class);
         when(apiKeyEntity.getApplication()).thenReturn(application);
@@ -371,7 +370,7 @@ public class ApiKeyServiceTest {
         subscription.setStatus(SubscriptionStatus.CLOSED);
 
         ApplicationEntity application = mock(ApplicationEntity.class);
-        when(application.getApiKeyMode()).thenReturn(ApiKeyMode.EXCLUSIVE.name());
+        when(application.getApiKeyMode()).thenReturn(io.gravitee.rest.api.model.ApiKeyMode.EXCLUSIVE);
 
         ApiKeyEntity apiKeyEntity = mock(ApiKeyEntity.class);
         when(apiKeyEntity.getId()).thenReturn(API_KEY);
@@ -595,7 +594,7 @@ public class ApiKeyServiceTest {
         String applicationId = "my-application-id";
 
         ApplicationEntity application = mock(ApplicationEntity.class);
-        when(application.getApiKeyMode()).thenReturn(ApiKeyMode.UNSPECIFIED.name());
+        when(application.getApiKeyMode()).thenReturn(io.gravitee.rest.api.model.ApiKeyMode.EXCLUSIVE);
         when(applicationService.findById(anyString(), eq(applicationId))).thenReturn(application);
 
         SubscriptionEntity subscriptionEntity1 = new SubscriptionEntity();
@@ -636,7 +635,7 @@ public class ApiKeyServiceTest {
         String applicationId = "my-application-id";
 
         ApplicationEntity application = mock(ApplicationEntity.class);
-        when(application.getApiKeyMode()).thenReturn(ApiKeyMode.UNSPECIFIED.name());
+        when(application.getApiKeyMode()).thenReturn(io.gravitee.rest.api.model.ApiKeyMode.EXCLUSIVE);
         when(applicationService.findById(anyString(), eq(applicationId))).thenReturn(application);
 
         SubscriptionEntity subscriptionEntity1 = new SubscriptionEntity();
@@ -677,7 +676,7 @@ public class ApiKeyServiceTest {
         String applicationId = "my-application-id";
 
         ApplicationEntity application = mock(ApplicationEntity.class);
-        when(application.getApiKeyMode()).thenReturn(ApiKeyMode.UNSPECIFIED.name());
+        when(application.getApiKeyMode()).thenReturn(ApiKeyMode.EXCLUSIVE);
         when(applicationService.findById(anyString(), eq(applicationId))).thenReturn(application);
 
         SubscriptionEntity subscriptionEntity = new SubscriptionEntity();
