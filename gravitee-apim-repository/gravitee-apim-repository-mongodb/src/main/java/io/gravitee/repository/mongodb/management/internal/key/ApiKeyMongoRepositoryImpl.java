@@ -19,13 +19,8 @@ import static com.mongodb.client.model.Aggregates.*;
 import static com.mongodb.client.model.Filters.*;
 
 import com.mongodb.client.AggregateIterable;
-import com.mongodb.client.MongoCursor;
-import com.mongodb.client.model.Aggregates;
-import com.mongodb.client.model.Filters;
 import io.gravitee.repository.management.api.search.ApiKeyCriteria;
-import io.gravitee.repository.management.model.ApiKey;
 import io.gravitee.repository.mongodb.management.internal.model.ApiKeyMongo;
-import io.gravitee.repository.mongodb.management.internal.model.RatingMongo;
 import java.util.*;
 import org.bson.Document;
 import org.bson.conversions.Bson;
@@ -99,7 +94,10 @@ public class ApiKeyMongoRepositoryImpl implements ApiKeyMongoRepositoryCustom {
 
     @Override
     public List<ApiKeyMongo> findByPlan(String plan) {
-        List<Bson> pipeline = List.of(lookup("subscriptions", "subscriptions", "_id", "sub"), unwind("$sub"), match(eq("sub.plan", plan)));
+        List<Bson> pipeline = new ArrayList<>();
+        pipeline.add(lookup("subscriptions", "subscriptions", "_id", "sub"));
+        pipeline.add(unwind("$sub"));
+        pipeline.add(match(eq("sub.plan", plan)));
 
         AggregateIterable<Document> aggregate = mongoTemplate
             .getCollection(mongoTemplate.getCollectionName(ApiKeyMongo.class))

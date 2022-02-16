@@ -11,3 +11,26 @@ databaseChangeLog:
                   type: nvarchar(16)
                   constraints:
                     nullable: true
+        - createTable:
+            tableName: ${gravitee_prefix}key_subscription
+            columns:
+              - column: { name: key, type: nvarchar(64), constraints: { nullable: true } }
+              - column: { name: subscription, type: nvarchar(64), constraints: { nullable: false } }
+        - addPrimaryKey:
+            constraintName: pk_${gravitee_prefix}key_subscription
+            columnNames: key, subscription
+            tableName: ${gravitee_prefix}key_subscription
+        - sql:
+            sql: insert into ${gravitee_prefix}key_subscription select (key, subscription) from keys
+        - addForeignKeyConstraint:
+            baseColumnNames: key
+            baseTableName: ${gravitee_prefix}key_subscription
+            constraintName: fk_key_subscription_key
+            referencedColumnNames: id
+            referencedTableName: keys
+        - addForeignKeyConstraint:
+            baseColumnNames: subscription
+            baseTableName: ${gravitee_prefix}key_subscription
+            constraintName: fk_subscription_key_subscription
+            referencedColumnNames: id
+            referencedTableName: subscriptions

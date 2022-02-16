@@ -38,8 +38,11 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JdbcApiKeyRepository.class);
 
+    private final String KEY_SUBSCRIPTION;
+
     JdbcApiKeyRepository(@Value("${management.jdbc.prefix:}") String tablePrefix) {
         super(tablePrefix, "keys");
+        KEY_SUBSCRIPTION = getTableNameFor("key_subscription");
     }
 
     @Override
@@ -48,10 +51,7 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
             .builder(ApiKey.class, this.tableName, "id")
             .addColumn("id", Types.NVARCHAR, String.class)
             .addColumn("key", Types.NVARCHAR, String.class)
-            .addColumn("subscription", Types.NVARCHAR, String.class)
             .addColumn("application", Types.NVARCHAR, String.class)
-            .addColumn("api", Types.NVARCHAR, String.class)
-            .addColumn("plan", Types.NVARCHAR, String.class)
             .addColumn("expire_at", Types.TIMESTAMP, Date.class)
             .addColumn("created_at", Types.TIMESTAMP, Date.class)
             .addColumn("updated_at", Types.TIMESTAMP, Date.class)
@@ -135,11 +135,17 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
     public Set<ApiKey> findBySubscription(String subscription) throws TechnicalException {
         LOGGER.debug("JdbcApiKeyRepository.findBySubscription({})", subscription);
         try {
-            List<ApiKey> apiKeys = jdbcTemplate.query(
-                getOrm().getSelectAllSql() + " where subscription = ?",
-                getOrm().getRowMapper(),
-                subscription
-            );
+            String query = new StringBuilder()
+                .append(getOrm().getSelectAllSql())
+                .append(" k")
+                .append(" join ")
+                .append(KEY_SUBSCRIPTION)
+                .append(" ks on ks.key = k.id")
+                .append(" where ks.subscription = ?")
+                .toString();
+
+            List<ApiKey> apiKeys = jdbcTemplate.query(query, getOrm().getRowMapper(), subscription);
+
             return new HashSet<>(apiKeys);
         } catch (final Exception ex) {
             LOGGER.error("Failed to find api keys by subscription:", ex);
@@ -151,8 +157,19 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
     public Set<ApiKey> findByPlan(String plan) throws TechnicalException {
         LOGGER.debug("JdbcApiKeyRepository.findByPlan({})", plan);
         try {
-            List<ApiKey> items = jdbcTemplate.query(getOrm().getSelectAllSql() + " where plan = ?", getOrm().getRowMapper(), plan);
-            return new HashSet<>(items);
+            String query = new StringBuilder()
+                .append(getOrm().getSelectAllSql())
+                .append(" k")
+                .append(" join ")
+                .append(KEY_SUBSCRIPTION)
+                .append(" ks on ks.key = k.id")
+                .append(" join subscription s on ks.subscription = s.id")
+                .append(" where s.plan = ?")
+                .toString();
+
+            List<ApiKey> apiKeys = jdbcTemplate.query(query.toString(), getOrm().getRowMapper(), plan);
+
+            return new HashSet<>(apiKeys);
         } catch (final Exception ex) {
             LOGGER.error("Failed to find api keys by plan:", ex);
             throw new TechnicalException("Failed to find api keys by plan", ex);
@@ -178,15 +195,20 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
     public Optional<ApiKey> findByKeyAndApi(String key, String api) throws TechnicalException {
         LOGGER.debug("JdbcApiKeyRepository.findByKeyAndApi(****, {})", api);
         try {
-            return jdbcTemplate
-                .query(
-                    getOrm().getSelectAllSql() + " where " + escapeReservedWord("key") + " = ? and api = ?",
-                    getOrm().getRowMapper(),
-                    key,
-                    api
-                )
-                .stream()
-                .findFirst();
+            String query = new StringBuilder()
+                .append(getOrm().getSelectAllSql())
+                .append(" k")
+                .append(" join ")
+                .append(KEY_SUBSCRIPTION)
+                .append(" ks on ks.key = k.id")
+                .append(" join subscription s on ks.subscription = s.id")
+                .append(" where k.key = ?")
+                .append(" and s.api = ?")
+                .toString();
+
+            List<ApiKey> apiKeys = jdbcTemplate.query(query, getOrm().getRowMapper(), key, api);
+
+            return apiKeys.stream().findFirst();
         } catch (final Exception ex) {
             LOGGER.error("Failed to find api key by key and api", ex);
             throw new TechnicalException("Failed to find api key by key and api", ex);
