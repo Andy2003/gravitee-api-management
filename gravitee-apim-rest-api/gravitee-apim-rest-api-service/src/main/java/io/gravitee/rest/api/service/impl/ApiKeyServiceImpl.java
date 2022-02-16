@@ -17,6 +17,8 @@ package io.gravitee.rest.api.service.impl;
 
 import static io.gravitee.repository.management.model.ApiKey.AuditEvent.*;
 import static io.gravitee.repository.management.model.Audit.AuditProperties.*;
+import static java.util.stream.Collectors.*;
+import static org.apache.commons.lang3.StringUtils.*;
 
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.ApiKeyRepository;
@@ -38,6 +40,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -170,7 +174,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
     private ApiKey generateForSubscription(String subscription, String customApiKey) {
         SubscriptionEntity subscriptionEntity = subscriptionService.findById(subscription);
 
-        if (customApiKey != null && !canCreate(customApiKey, subscriptionEntity)) {
+        if (isNotEmpty(customApiKey) && !canCreate(customApiKey, subscriptionEntity)) {
             throw new ApiKeyAlreadyExistingException();
         }
 
@@ -185,7 +189,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
         apiKey.setApplication(subscriptionEntity.getApplication());
         apiKey.setCreatedAt(new Date());
         apiKey.setUpdatedAt(apiKey.getCreatedAt());
-        apiKey.setKey(customApiKey != null ? customApiKey : apiKeyGenerator.generate());
+        apiKey.setKey(isNotEmpty(customApiKey) ? customApiKey : apiKeyGenerator.generate());
 
         // By default, the API Key will expire when subscription is closed
         apiKey.setExpireAt(subscriptionEntity.getEndingAt());
@@ -290,7 +294,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
     public List<ApiKeyEntity> findByKey(String apiKey) {
         try {
             LOGGER.debug("Find API Keys by key");
-            return apiKeyRepository.findByKey(apiKey).stream().map(this::convert).collect(Collectors.toList());
+            return apiKeyRepository.findByKey(apiKey).stream().map(this::convert).collect(toList());
         } catch (TechnicalException e) {
             LOGGER.error("An error occurs while finding API keys", e);
             throw new TechnicalManagementException("An error occurs while finding API keys", e);
@@ -308,7 +312,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
                 .stream()
                 .map(this::convert)
                 .sorted((o1, o2) -> o2.getCreatedAt().compareTo(o1.getCreatedAt()))
-                .collect(Collectors.toList());
+                .collect(toList());
         } catch (TechnicalException ex) {
             LOGGER.error("An error occurs while finding API keys for subscription {}", subscription, ex);
             throw new TechnicalManagementException(
@@ -327,6 +331,16 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
         } catch (TechnicalException ex) {
             LOGGER.error("An error occurs while trying to find an API Key for API {}", apiId, ex);
             throw new TechnicalManagementException(String.format("An error occurs while trying to find an API Key for API %s", apiId), ex);
+        }
+    }
+
+    @Override
+    public List<ApiKeyEntity> findByApplication(String applicationId) {
+        try {
+           return apiKeyRepository.findByApplication(applicationId).stream().map(this::convert).collect(toList());
+        } catch (TechnicalException ex) {
+            LOGGER.error("An error occurs while trying to find API Keys for application {}", applicationId, ex);
+            throw new TechnicalManagementException(String.format("An error occurs while trying to find API Keys for application %s", applicationId), ex);
         }
     }
 
@@ -441,7 +455,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
 
             ApiKeyCriteria.Builder builder = toApiKeyCriteriaBuilder(query);
 
-            return apiKeyRepository.findByCriteria(builder.build()).stream().map(this::convert).collect(Collectors.toList());
+            return apiKeyRepository.findByCriteria(builder.build()).stream().map(this::convert).collect(toList());
         } catch (TechnicalException ex) {
             LOGGER.error("An error occurs while trying to search api keys: {}", query, ex);
             throw new TechnicalManagementException(String.format("An error occurs while trying to search api keys: {}", query), ex);

@@ -48,6 +48,8 @@ public interface ApiKeyService {
 
     ApiKeyEntity findByKeyAndApi(String apiKey, String apiId);
 
+    List<ApiKeyEntity> findByApplication(String applicationId);
+
     void delete(String apiKey);
 
     ApiKeyEntity update(ApiKeyEntity apiKeyEntity);

@@ -16,6 +16,7 @@
 package io.gravitee.repository.jdbc.management;
 
 import static java.lang.String.format;
+import static org.springframework.util.CollectionUtils.*;
 
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.jdbc.orm.JdbcObjectMapper;
@@ -31,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.CollectionUtils;
 
 /**
  *
@@ -280,6 +282,10 @@ public class JdbcPlanRepository extends JdbcAbstractFindAllRepository<Plan> impl
 
     @Override
     public Set<Plan> findByIdIn(Collection<String> ids) throws TechnicalException {
+        if (isEmpty(ids)) {
+            return Set.of();
+        }
+
         try {
             LOGGER.debug("JdbcPlanRepository.findByIdIn({})", ids);
             List<Plan> plans = jdbcTemplate.query(

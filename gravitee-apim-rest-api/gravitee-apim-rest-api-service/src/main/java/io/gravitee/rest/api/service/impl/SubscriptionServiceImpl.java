@@ -1326,16 +1326,23 @@ public class SubscriptionServiceImpl extends AbstractService implements Subscrip
         ApplicationEntity application
     ) {
         if (application.getApiKeyMode() == SHARED) {
-            // TODO : FIND THE ALREADY EXISTING SHARED API KEY, AND LINK SUBSCRIPTION TO IT
-            // TODO : IF NOT YET EXISTING, GENERATE A NEW ONE
-            throw new RuntimeException("TODO");
+            apiKeyService.findByApplication(application.getId())
+              .stream()
+              .max(Comparator.comparing(ApiKeyEntity::getCreatedAt))
+              .ifPresentOrElse(apiKey -> {
+                  findAndSetSubscription(processSubscription.getId(), apiKey);
+              }, () -> {
+                  apiKeyService.generate(subscription.getId(), processSubscription.getCustomApiKey());
+              });
         } else {
-            if (StringUtils.isNotEmpty(processSubscription.getCustomApiKey())) {
-                apiKeyService.generate(subscription.getId(), processSubscription.getCustomApiKey());
-            } else {
-                apiKeyService.generate(subscription.getId());
-            }
+            apiKeyService.generate(subscription.getId(), processSubscription.getCustomApiKey());
         }
+    }
+
+    private void findAndSetSubscription(String subscriptionId, ApiKeyEntity apiKey) {
+        SubscriptionEntity subscription = findById(subscriptionId);
+        apiKey.getSubscriptions().add(subscription);
+        apiKeyService.update(apiKey);
     }
 
     private long countApiKeySubscriptions(ApplicationEntity application) {
