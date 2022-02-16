@@ -1326,14 +1326,18 @@ public class SubscriptionServiceImpl extends AbstractService implements Subscrip
         ApplicationEntity application
     ) {
         if (application.getApiKeyMode() == SHARED) {
-            apiKeyService.findByApplication(application.getId())
-              .stream()
-              .max(Comparator.comparing(ApiKeyEntity::getCreatedAt))
-              .ifPresentOrElse(apiKey -> {
-                  findAndSetSubscription(processSubscription.getId(), apiKey);
-              }, () -> {
-                  apiKeyService.generate(subscription.getId(), processSubscription.getCustomApiKey());
-              });
+            apiKeyService
+                .findByApplication(application.getId())
+                .stream()
+                .max(Comparator.comparing(ApiKeyEntity::getCreatedAt))
+                .ifPresentOrElse(
+                    apiKey -> {
+                        findAndSetSubscription(processSubscription.getId(), apiKey);
+                    },
+                    () -> {
+                        apiKeyService.generate(subscription.getId(), processSubscription.getCustomApiKey());
+                    }
+                );
         } else {
             apiKeyService.generate(subscription.getId(), processSubscription.getCustomApiKey());
         }

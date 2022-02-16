@@ -76,11 +76,25 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
     @Override
     public ApiKey update(ApiKey apiKey) throws TechnicalException {
         try {
-            ApiKey update = super.update(apiKey);
+            ApiKey updatedApiKey = super.update(apiKey);
             if (!isEmpty(apiKey.getSubscriptions())) {
                 storeSubscriptions(apiKey);
             }
-            return update;
+            return updatedApiKey;
+        } catch (Exception e) {
+            LOGGER.error("Failed to update api key " + apiKey.getId(), e);
+            throw new TechnicalException("Failed to update api key " + apiKey.getId(), e);
+        }
+    }
+
+    @Override
+    public ApiKey create(ApiKey apiKey) throws TechnicalException {
+        try {
+            ApiKey newApiKey = super.create(apiKey);
+            if (!isEmpty(apiKey.getSubscriptions())) {
+                storeSubscriptions(apiKey);
+            }
+            return newApiKey;
         } catch (Exception e) {
             LOGGER.error("Failed to update api key " + apiKey.getId(), e);
             throw new TechnicalException("Failed to update api key " + apiKey.getId(), e);

@@ -40,7 +40,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
-
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -308,11 +307,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
 
             SubscriptionEntity subscriptionEntity = subscriptionService.findById(subscription);
             Set<ApiKey> keys = apiKeyRepository.findBySubscription(subscriptionEntity.getId());
-            return keys
-                .stream()
-                .map(this::convert)
-                .sorted((o1, o2) -> o2.getCreatedAt().compareTo(o1.getCreatedAt()))
-                .collect(toList());
+            return keys.stream().map(this::convert).sorted((o1, o2) -> o2.getCreatedAt().compareTo(o1.getCreatedAt())).collect(toList());
         } catch (TechnicalException ex) {
             LOGGER.error("An error occurs while finding API keys for subscription {}", subscription, ex);
             throw new TechnicalManagementException(
@@ -337,10 +332,13 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
     @Override
     public List<ApiKeyEntity> findByApplication(String applicationId) {
         try {
-           return apiKeyRepository.findByApplication(applicationId).stream().map(this::convert).collect(toList());
+            return apiKeyRepository.findByApplication(applicationId).stream().map(this::convert).collect(toList());
         } catch (TechnicalException ex) {
             LOGGER.error("An error occurs while trying to find API Keys for application {}", applicationId, ex);
-            throw new TechnicalManagementException(String.format("An error occurs while trying to find API Keys for application %s", applicationId), ex);
+            throw new TechnicalManagementException(
+                String.format("An error occurs while trying to find API Keys for application %s", applicationId),
+                ex
+            );
         }
     }
 
@@ -560,7 +558,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
     private void createAuditLog(ApiKey key, ApiKey previousApiKey, ApiKey.AuditEvent event, Date eventDate) {
         ApplicationEntity application = applicationService.findById(GraviteeContext.getCurrentEnvironment(), key.getApplication());
 
-        if (!application.getApiKeyMode().equals(ApiKeyMode.SHARED.name())) {
+        if (!application.getApiKeyMode().equals(io.gravitee.rest.api.model.ApiKeyMode.SHARED)) {
             SubscriptionEntity subscription = subscriptionService.findByIdIn(key.getSubscriptions()).get(0);
 
             Map<Audit.AuditProperties, String> properties = new LinkedHashMap<>();

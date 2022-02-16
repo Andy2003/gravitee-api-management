@@ -14,7 +14,7 @@ databaseChangeLog:
         - createTable:
             tableName: ${gravitee_prefix}key_subscription
             columns:
-              - column: { name: key, type: nvarchar(64), constraints: { nullable: true } }
+              - column: { name: key, type: nvarchar(64), constraints: { nullable: false } }
               - column: { name: subscription, type: nvarchar(64), constraints: { nullable: false } }
         - addPrimaryKey:
             constraintName: pk_${gravitee_prefix}key_subscription
@@ -34,3 +34,13 @@ databaseChangeLog:
             constraintName: fk_subscription_key_subscription
             referencedColumnNames: id
             referencedTableName: subscriptions
+        - dropColumn:
+            columnName: subscription
+            tableName: ${gravitee_prefix}keys
+        - dropColumn:
+            columnName: api
+            tableName: ${gravitee_prefix}keys
+        - dropColumn:
+            columnName: plan
+            tableName: ${gravitee_prefix}keys
+
