@@ -45,7 +45,7 @@ public class ApiKeyMongoRepositoryImpl implements ApiKeyMongoRepositoryCustom {
         pipeline.add(unwind("$sub"));
 
         if (!filter.isIncludeRevoked()) {
-            pipeline.add(match(eq("key", false)));
+            pipeline.add(match(eq("revoked", false)));
         }
 
         if (filter.getPlans() != null) {
