@@ -194,13 +194,11 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
     public Set<ApiKey> findBySubscription(String subscription) throws TechnicalException {
         LOGGER.debug("JdbcApiKeyRepository.findBySubscription({})", subscription);
         try {
-            String query = new StringBuilder()
-                .append(getOrm().getSelectAllSql())
-                .append(" k")
-                .append(" join ")
-                .append(KEY_SUBSCRIPTION)
-                .append(" ks on ks.key_id = k.id and ks.subscription_id = ?")
-                .toString();
+            String query = getOrm().getSelectAllSql() +
+              " k" +
+              " join " +
+              KEY_SUBSCRIPTION +
+              " ks on ks.key_id = k.id and ks.subscription_id = ?";
 
             CollatingRowMapper<ApiKey> rowMapper = new CollatingRowMapper<>(getOrm().getRowMapper(), CHILD_ADDER, "id");
 
@@ -217,16 +215,14 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
     public Set<ApiKey> findByPlan(String plan) throws TechnicalException {
         LOGGER.debug("JdbcApiKeyRepository.findByPlan({})", plan);
         try {
-            String query = new StringBuilder()
-                .append(getOrm().getSelectAllSql())
-                .append(" k")
-                .append(" join ")
-                .append(KEY_SUBSCRIPTION)
-                .append(" ks on ks.key_id = k.id")
-                .append(" join ")
-                .append(SUBSCRIPTION)
-                .append(" s on ks.subscription_id = s.id and s.plan = ?")
-                .toString();
+            String query = getOrm().getSelectAllSql() +
+              " k" +
+              " join " +
+              KEY_SUBSCRIPTION +
+              " ks on ks.key_id = k.id" +
+              " join " +
+              SUBSCRIPTION +
+              " s on ks.subscription_id = s.id and s.plan = ?";
 
             CollatingRowMapper<ApiKey> rowMapper = new CollatingRowMapper<>(getOrm().getRowMapper(), CHILD_ADDER, "id");
 
@@ -243,15 +239,13 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
     public List<ApiKey> findByKey(String key) throws TechnicalException {
         LOGGER.debug("JdbcApiKeyRepository.findByKey(****)");
         try {
-            String query = new StringBuilder()
-                .append(getOrm().getSelectAllSql())
-                .append(" k")
-                .append(" left join ")
-                .append(KEY_SUBSCRIPTION)
-                .append(" ks on ks.key_id = k.id ")
-                .append("where k.key = ?")
-                .append(" order by k.updated_at desc ")
-                .toString();
+            String query = getOrm().getSelectAllSql() +
+              " k" +
+              " left join " +
+              KEY_SUBSCRIPTION +
+              " ks on ks.key_id = k.id " +
+              "where k.key = ?" +
+              " order by k.updated_at desc ";
 
             CollatingRowMapper<ApiKey> rowMapper = new CollatingRowMapper<>(getOrm().getRowMapper(), CHILD_ADDER, "id");
 
@@ -268,15 +262,13 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
     public List<ApiKey> findByApplication(String applicationId) throws TechnicalException {
         LOGGER.debug("JdbcApiKeyRepository.findByApplication({})", applicationId);
         try {
-            String query = new StringBuilder()
-                .append(getOrm().getSelectAllSql())
-                .append(" k")
-                .append(" left join ")
-                .append(KEY_SUBSCRIPTION)
-                .append(" ks on ks.key_id = k.id ")
-                .append("where k.application = ?")
-                .append(" order by k.updated_at desc ")
-                .toString();
+            String query = getOrm().getSelectAllSql() +
+              " k" +
+              " left join " +
+              KEY_SUBSCRIPTION +
+              " ks on ks.key_id = k.id " +
+              "where k.application = ?" +
+              " order by k.updated_at desc ";
 
             CollatingRowMapper<ApiKey> rowMapper = new CollatingRowMapper<>(getOrm().getRowMapper(), CHILD_ADDER, "id");
 
@@ -293,18 +285,16 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
     public Optional<ApiKey> findByKeyAndApi(String key, String api) throws TechnicalException {
         LOGGER.debug("JdbcApiKeyRepository.findByKeyAndApi(****, {})", api);
         try {
-            String query = new StringBuilder()
-                .append(getOrm().getSelectAllSql())
-                .append(" k")
-                .append(" join ")
-                .append(KEY_SUBSCRIPTION)
-                .append(" ks on ks.key_id = k.id")
-                .append(" join ")
-                .append(SUBSCRIPTION)
-                .append(" s on ks.subscription_id = s.id ")
-                .append(" where k.key = ?")
-                .append(" and s.api = ?")
-                .toString();
+            String query = getOrm().getSelectAllSql() +
+              " k" +
+              " join " +
+              KEY_SUBSCRIPTION +
+              " ks on ks.key_id = k.id" +
+              " join " +
+              SUBSCRIPTION +
+              " s on ks.subscription_id = s.id " +
+              " where k.key = ?" +
+              " and s.api = ?";
 
             CollatingRowMapper<ApiKey> rowMapper = new CollatingRowMapper<>(getOrm().getRowMapper(), CHILD_ADDER, "id");
 
@@ -321,14 +311,12 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
     public Optional<ApiKey> findById(String id) throws TechnicalException {
         LOGGER.debug("JdbcApiKeyRepository.findById({})", id);
         try {
-            String query = new StringBuilder()
-                .append(getOrm().getSelectAllSql())
-                .append(" k ")
-                .append(" left join ")
-                .append(KEY_SUBSCRIPTION)
-                .append(" ks on ks.key_id = k.id")
-                .append(" where k.id = ?")
-                .toString();
+            String query = getOrm().getSelectAllSql() +
+              " k " +
+              " left join " +
+              KEY_SUBSCRIPTION +
+              " ks on ks.key_id = k.id" +
+              " where k.id = ?";
 
             CollatingRowMapper<ApiKey> rowMapper = new CollatingRowMapper<>(getOrm().getRowMapper(), CHILD_ADDER, "id");
 
@@ -345,14 +333,12 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
     public Set<ApiKey> findAll() throws TechnicalException {
         LOGGER.debug("JdbcApiKeyRepository.findAll()");
         try {
-            String query = new StringBuilder()
-                .append(getOrm().getSelectAllSql())
-                .append(" k")
-                .append(" join ")
-                .append(KEY_SUBSCRIPTION)
-                .append(" ks on ks.key_id = k.id")
-                .append(" order by k.updated_at desc ")
-                .toString();
+            String query = getOrm().getSelectAllSql() +
+              " k" +
+              " join " +
+              KEY_SUBSCRIPTION +
+              " ks on ks.key_id = k.id" +
+              " order by k.updated_at desc ";
 
             CollatingRowMapper<ApiKey> rowMapper = new CollatingRowMapper<>(getOrm().getRowMapper(), CHILD_ADDER, "id");
 
