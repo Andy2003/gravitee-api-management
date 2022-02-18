@@ -16,6 +16,7 @@
 package io.gravitee.rest.api.service;
 
 import io.gravitee.rest.api.model.ApiKeyEntity;
+import io.gravitee.rest.api.model.ApplicationEntity;
 import io.gravitee.rest.api.model.SubscriptionEntity;
 import io.gravitee.rest.api.model.key.ApiKeyQuery;
 import java.util.Collection;
@@ -26,13 +27,11 @@ import java.util.List;
  * @author GraviteeSource Team
  */
 public interface ApiKeyService {
-    ApiKeyEntity generate(String subscription);
+    ApiKeyEntity generate(ApplicationEntity application, SubscriptionEntity subscription, String customApiKey);
 
-    ApiKeyEntity generate(String subscription, String customApiKey);
+    ApiKeyEntity renew(SubscriptionEntity subscription);
 
-    ApiKeyEntity renew(String subscription);
-
-    ApiKeyEntity renew(String subscription, String customApiKey);
+    ApiKeyEntity renew(SubscriptionEntity subscription, String customApiKey);
 
     void revoke(String keyId, boolean notify);
 

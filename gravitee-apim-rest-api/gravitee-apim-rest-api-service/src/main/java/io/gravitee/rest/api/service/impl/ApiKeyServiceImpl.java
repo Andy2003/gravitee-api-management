@@ -25,6 +25,7 @@ import io.gravitee.repository.management.api.ApiKeyRepository;
 import io.gravitee.repository.management.api.search.ApiKeyCriteria;
 import io.gravitee.repository.management.model.ApiKey;
 import io.gravitee.repository.management.model.ApiKeyMode;
+import io.gravitee.repository.management.model.Application;
 import io.gravitee.repository.management.model.Audit;
 import io.gravitee.rest.api.model.*;
 import io.gravitee.rest.api.model.api.ApiEntity;
@@ -84,40 +85,20 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
     private NotifierService notifierService;
 
     @Override
-    public ApiKeyEntity generate(String subscription) {
-        return generate(subscription, null);
-    }
-
-    @Override
-    public ApiKeyEntity generate(String subscription, String customApiKey) {
-        try {
-            LOGGER.debug("Generate an API Key for subscription {}", subscription);
-
-            ApiKey apiKey = generateForSubscription(subscription, customApiKey);
-            apiKey = apiKeyRepository.create(apiKey);
-
-            //TODO: Send a notification to the application owner
-
-            // Audit
-            createAuditLog(apiKey, null, APIKEY_CREATED, apiKey.getCreatedAt());
-
-            return convert(apiKey);
-        } catch (TechnicalException ex) {
-            LOGGER.error("An error occurs while trying to generate an API Key for {}", subscription, ex);
-            throw new TechnicalManagementException(
-                String.format("An error occurs while trying to generate an API Key for %s", subscription),
-                ex
-            );
+    public ApiKeyEntity generate(ApplicationEntity application, SubscriptionEntity subscription, String customApiKey) {
+        if (!application.hasSharedMode()) {
+            return generate(subscription, customApiKey);
         }
+        return findOrGenerate(application, subscription, customApiKey);
     }
 
     @Override
-    public ApiKeyEntity renew(String subscription) {
+    public ApiKeyEntity renew(SubscriptionEntity subscription) {
         return renew(subscription, null);
     }
 
     @Override
-    public ApiKeyEntity renew(String subscription, String customApiKey) {
+    public ApiKeyEntity renew(SubscriptionEntity subscription, String customApiKey) {
         try {
             LOGGER.debug("Renew API Key for subscription {}", subscription);
 
@@ -129,7 +110,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
 
             // Previously generated keys should be set as revoked
             // Get previously generated keys to set their expiration date
-            Set<ApiKey> oldKeys = apiKeyRepository.findBySubscription(subscription);
+            Set<ApiKey> oldKeys = apiKeyRepository.findBySubscription(subscription.getId());
             for (ApiKey oldKey : oldKeys) {
                 ApiKeyEntity oldKeyEntity = convert(oldKey);
                 if (!oldKey.equals(newApiKey) && !oldKeyEntity.isExpired()) {
@@ -153,14 +134,38 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
         }
     }
 
-    /**
-     * Generate an {@link ApiKey} from a subscription
-     *
-     * @param subscription
-     * @return An Api Key
-     */
-    private ApiKey generateForSubscription(String subscription) {
-        return generateForSubscription(subscription, null);
+    private ApiKeyEntity findOrGenerate(ApplicationEntity application, SubscriptionEntity subscription, String customApiKey) {
+        return findByApplication(application.getId())
+            .stream()
+            .findFirst()
+            .map(apiKey -> {
+                apiKey.addSubscription(subscription);
+                update(apiKey);
+                return apiKey;
+            })
+            .orElseGet(() -> generate(subscription, customApiKey));
+    }
+
+    private ApiKeyEntity generate(SubscriptionEntity subscription, String customApiKey) {
+        try {
+            LOGGER.debug("Generate an API Key for subscription {}", subscription);
+
+            ApiKey apiKey = generateForSubscription(subscription, customApiKey);
+            apiKey = apiKeyRepository.create(apiKey);
+
+            //TODO: Send a notification to the application owner
+
+            // Audit
+            createAuditLog(apiKey, null, APIKEY_CREATED, apiKey.getCreatedAt());
+
+            return convert(apiKey);
+        } catch (TechnicalException ex) {
+            LOGGER.error("An error occurs while trying to generate an API Key for {}", subscription, ex);
+            throw new TechnicalManagementException(
+                String.format("An error occurs while trying to generate an API Key for %s", subscription),
+                ex
+            );
+        }
     }
 
     /**
@@ -170,28 +175,26 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
      * @param customApiKey
      * @return An Api Key
      */
-    private ApiKey generateForSubscription(String subscription, String customApiKey) {
-        SubscriptionEntity subscriptionEntity = subscriptionService.findById(subscription);
-
-        if (isNotEmpty(customApiKey) && !canCreate(customApiKey, subscriptionEntity)) {
+    private ApiKey generateForSubscription(SubscriptionEntity subscription, String customApiKey) {
+        if (isNotEmpty(customApiKey) && !canCreate(customApiKey, subscription)) {
             throw new ApiKeyAlreadyExistingException();
         }
 
         Date now = new Date();
-        if (subscriptionEntity.getEndingAt() != null && subscriptionEntity.getEndingAt().before(now)) {
-            throw new SubscriptionClosedException(subscription);
+        if (subscription.getEndingAt() != null && subscription.getEndingAt().before(now)) {
+            throw new SubscriptionClosedException(subscription.getId());
         }
 
         ApiKey apiKey = new ApiKey();
         apiKey.setId(UuidString.generateRandom());
-        apiKey.setSubscriptions(List.of(subscription));
-        apiKey.setApplication(subscriptionEntity.getApplication());
+        apiKey.setSubscriptions(List.of(subscription.getId()));
+        apiKey.setApplication(subscription.getApplication());
         apiKey.setCreatedAt(new Date());
         apiKey.setUpdatedAt(apiKey.getCreatedAt());
         apiKey.setKey(isNotEmpty(customApiKey) ? customApiKey : apiKeyGenerator.generate());
 
         // By default, the API Key will expire when subscription is closed
-        apiKey.setExpireAt(subscriptionEntity.getEndingAt());
+        apiKey.setExpireAt(subscription.getEndingAt());
 
         return apiKey;
     }
