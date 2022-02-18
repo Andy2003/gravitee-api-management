@@ -20,10 +20,8 @@ import static java.util.stream.Collectors.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.gravitee.rest.api.model.settings.Application;
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -160,12 +158,19 @@ public class ApiKeyEntity {
     }
 
     @JsonIgnore
-    public Set<String> getSubscriptionIds() {
-        return subscriptions.stream().map(SubscriptionEntity::getId).collect(toSet());
+    public List<String> getSubscriptionIds() {
+        return subscriptions.stream().map(SubscriptionEntity::getId).collect(toList());
     }
 
     public boolean hasSubscription(String subscriptionId) {
         return getSubscriptionIds().stream().anyMatch(subscriptionId::equals);
+    }
+
+    public void addSubscription(SubscriptionEntity subscription) {
+        if (subscriptions == null) {
+            subscriptions = new ArrayList<>();
+        }
+        subscriptions.add(subscription);
     }
 
     @Override

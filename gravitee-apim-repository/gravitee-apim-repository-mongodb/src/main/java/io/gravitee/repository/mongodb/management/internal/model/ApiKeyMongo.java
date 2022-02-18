@@ -53,19 +53,27 @@ public class ApiKeyMongo {
     private Set<String> subscriptions;
 
     /**
-     * The application used to make the subscription
+     * The subscription for which the Api Key is generated
+     *
      */
-    private String application;
+    private String subscription;
 
     /**
      * The subscribed plan
+     *
      */
     private String plan;
 
     /**
      * The api on which this api key is used
+     *
      */
     private String api;
+
+    /**
+     * The application used to make the subscription
+     */
+    private String application;
 
     /**
      * Expiration date (end date) of the Api Key
@@ -124,14 +132,6 @@ public class ApiKeyMongo {
 
     public void setApplication(String application) {
         this.application = application;
-    }
-
-    public String getPlan() {
-        return plan;
-    }
-
-    public void setPlan(String plan) {
-        this.plan = plan;
     }
 
     public Date getExpireAt() {
@@ -198,10 +198,44 @@ public class ApiKeyMongo {
         this.id = id;
     }
 
+    /**
+     * @deprecated
+     * Starting from 3.17 this field is kept for backward compatibility only and subscriptions should be used instead
+     */
+    @Deprecated
+    public String getSubscription() {
+        return subscription;
+    }
+
+    @Deprecated(since = "3.17.0", forRemoval = true)
+    public void setSubscription(String subscription) {
+        this.subscription = subscription;
+    }
+
+    /**
+     * @deprecated
+     * Starting from 3.17 this field is kept for backward compatibility and plans should be accessed through subscriptions instead
+     */
+    @Deprecated(since = "3.17.0", forRemoval = true)
+    public String getPlan() {
+        return plan;
+    }
+
+    @Deprecated(since = "3.17.0", forRemoval = true)
+    public void setPlan(String plan) {
+        this.plan = plan;
+    }
+
+    /**
+     * @deprecated
+     * Starting from 3.17 this field is kept for backward compatibility and apis should be accessed through subscriptions instead
+     */
+    @Deprecated(since = "3.17.0", forRemoval = true)
     public String getApi() {
         return api;
     }
 
+    @Deprecated(since = "3.17.0", forRemoval = true)
     public void setApi(String api) {
         this.api = api;
     }

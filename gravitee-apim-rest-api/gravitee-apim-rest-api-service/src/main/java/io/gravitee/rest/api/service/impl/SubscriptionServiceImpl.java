@@ -1345,7 +1345,7 @@ public class SubscriptionServiceImpl extends AbstractService implements Subscrip
 
     private void findAndSetSubscription(String subscriptionId, ApiKeyEntity apiKey) {
         SubscriptionEntity subscription = findById(subscriptionId);
-        apiKey.getSubscriptions().add(subscription);
+        apiKey.addSubscription(subscription);
         apiKeyService.update(apiKey);
     }
 

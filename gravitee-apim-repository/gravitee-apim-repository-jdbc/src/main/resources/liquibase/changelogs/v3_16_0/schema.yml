@@ -14,33 +14,35 @@ databaseChangeLog:
         - createTable:
             tableName: ${gravitee_prefix}key_subscription
             columns:
-              - column: { name: key, type: nvarchar(64), constraints: { nullable: false } }
-              - column: { name: subscription, type: nvarchar(64), constraints: { nullable: false } }
+              - column: { name: key_id, type: nvarchar(64), constraints: { nullable: false } }
+              - column: { name: subscription_id, type: nvarchar(64), constraints: { nullable: false } }
         - addPrimaryKey:
             constraintName: pk_${gravitee_prefix}key_subscription
-            columnNames: key, subscription
+            columnNames: key_id, subscription_id
             tableName: ${gravitee_prefix}key_subscription
-        - sql:
-            sql: insert into ${gravitee_prefix}key_subscription select (key, subscription) from keys
         - addForeignKeyConstraint:
-            baseColumnNames: key
+            baseColumnNames: key_id
             baseTableName: ${gravitee_prefix}key_subscription
             constraintName: fk_key_subscription_key
             referencedColumnNames: id
             referencedTableName: keys
         - addForeignKeyConstraint:
-            baseColumnNames: subscription
+            baseColumnNames: subscription_id
             baseTableName: ${gravitee_prefix}key_subscription
             constraintName: fk_subscription_key_subscription
             referencedColumnNames: id
             referencedTableName: subscriptions
-        - dropColumn:
-            columnName: subscription
-            tableName: ${gravitee_prefix}keys
-        - dropColumn:
+        - dropNotNullConstraint:
+            columnDataType: nvarchar(64)
             columnName: api
             tableName: ${gravitee_prefix}keys
-        - dropColumn:
+        - dropNotNullConstraint:
+            columnDataType: nvarchar(64)
             columnName: plan
             tableName: ${gravitee_prefix}keys
+        - dropNotNullConstraint:
+            columnDataType: nvarchar(64)
+            columnName: subscription
+            tableName: ${gravitee_prefix}keys
+
 

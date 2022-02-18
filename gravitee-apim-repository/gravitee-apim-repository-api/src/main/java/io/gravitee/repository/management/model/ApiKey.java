@@ -48,7 +48,25 @@ public class ApiKey implements Serializable {
     /**
      * The subscriptions for which the Api Key is generated
      */
-    private List<String> subscriptions = new ArrayList<>();
+    private List<String> subscriptions;
+
+    /**
+     * The subscription for which the Api Key is generated
+     *
+     */
+    private String subscription;
+
+    /**
+     * The subscribed plan
+     *
+     */
+    private String plan;
+
+    /**
+     * The api on which this api key is used
+     *
+     */
+    private String api;
 
     /**
      * The application used to make the subscription
@@ -192,6 +210,48 @@ public class ApiKey implements Serializable {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    /**
+     * @deprecated
+     * Starting from 3.17 this field is kept for backward compatibility only and subscriptions should be used instead
+     */
+    @Deprecated
+    public String getSubscription() {
+        return subscription;
+    }
+
+    @Deprecated(since = "3.17.0", forRemoval = true)
+    public void setSubscription(String subscription) {
+        this.subscription = subscription;
+    }
+
+    /**
+     * @deprecated
+     * Starting from 3.17 this field is kept for backward compatibility and plans should be accessed through subscriptions instead
+     */
+    @Deprecated(since = "3.17.0", forRemoval = true)
+    public String getPlan() {
+        return plan;
+    }
+
+    @Deprecated(since = "3.17.0", forRemoval = true)
+    public void setPlan(String plan) {
+        this.plan = plan;
+    }
+
+    /**
+     * @deprecated
+     * Starting from 3.17 this field is kept for backward compatibility and apis should be accessed through subscriptions instead
+     */
+    @Deprecated(since = "3.17.0", forRemoval = true)
+    public String getApi() {
+        return api;
+    }
+
+    @Deprecated(since = "3.17.0", forRemoval = true)
+    public void setApi(String api) {
+        this.api = api;
     }
 
     @Override
