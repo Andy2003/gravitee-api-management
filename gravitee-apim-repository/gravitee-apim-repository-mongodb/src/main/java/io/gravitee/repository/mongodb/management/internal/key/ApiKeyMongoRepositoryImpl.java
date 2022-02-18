@@ -41,15 +41,8 @@ public class ApiKeyMongoRepositoryImpl implements ApiKeyMongoRepositoryCustom {
     public List<ApiKeyMongo> search(ApiKeyCriteria filter) {
         List<Bson> pipeline = new ArrayList<>();
 
-        pipeline.add(lookup("subscriptions", "subscriptions", "_id", "sub"));
-        pipeline.add(unwind("$sub"));
-
         if (!filter.isIncludeRevoked()) {
             pipeline.add(match(eq("revoked", false)));
-        }
-
-        if (filter.getPlans() != null) {
-            pipeline.add(match(in("sub.plan", filter.getPlans())));
         }
 
         // set range query
@@ -67,6 +60,12 @@ public class ApiKeyMongoRepositoryImpl implements ApiKeyMongoRepositoryCustom {
             pipeline.add(match(lte("expireAt", new Date(filter.getExpireBefore()))));
         }
 
+        if (filter.getPlans() != null) {
+            pipeline.add(lookup("subscriptions", "subscriptions", "_id", "sub"));
+            pipeline.add(unwind("$sub"));
+            pipeline.add(match(in("sub.plan", filter.getPlans())));
+        }
+
         pipeline.add(sort(Sorts.descending("updatedAt")));
 
         AggregateIterable<Document> aggregate = mongoTemplate
@@ -79,9 +78,9 @@ public class ApiKeyMongoRepositoryImpl implements ApiKeyMongoRepositoryCustom {
     @Override
     public List<ApiKeyMongo> findByKeyAndApi(String key, String api) {
         List<Bson> pipeline = List.of(
+            match(eq("key", key)),
             lookup("subscriptions", "subscriptions", "_id", "sub"),
             unwind("$sub"),
-            match(eq("key", key)),
             match(eq("sub.api", api))
         );
 
