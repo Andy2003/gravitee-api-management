@@ -172,7 +172,7 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
                 args.add(new Date(criteria.getExpireBefore()));
             }
 
-            query.append(" order by updated_at desc ");
+            query.append(" order by k.updated_at desc ");
 
             return jdbcTemplate.query(query.toString(), getOrm().getRowMapper(), args.toArray());
         } catch (final Exception ex) {
@@ -250,6 +250,7 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
                 .append(KEY_SUBSCRIPTION)
                 .append(" ks on ks.key_id = k.id ")
                 .append("where k.key = ?")
+                .append(" order by k.updated_at desc ")
                 .toString();
 
             CollatingRowMapper<ApiKey> rowMapper = new CollatingRowMapper<>(getOrm().getRowMapper(), CHILD_ADDER, "id");
@@ -264,7 +265,7 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
     }
 
     @Override
-    public Set<ApiKey> findByApplication(String applicationId) throws TechnicalException {
+    public List<ApiKey> findByApplication(String applicationId) throws TechnicalException {
         LOGGER.debug("JdbcApiKeyRepository.findByApplication({})", applicationId);
         try {
             String query = new StringBuilder()
@@ -274,13 +275,14 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
                 .append(KEY_SUBSCRIPTION)
                 .append(" ks on ks.key_id = k.id ")
                 .append("where k.application = ?")
+                .append(" order by k.updated_at desc ")
                 .toString();
 
             CollatingRowMapper<ApiKey> rowMapper = new CollatingRowMapper<>(getOrm().getRowMapper(), CHILD_ADDER, "id");
 
             jdbcTemplate.query(query, rowMapper, applicationId);
 
-            return new HashSet<>(rowMapper.getRows());
+            return rowMapper.getRows();
         } catch (final Exception ex) {
             LOGGER.error("Failed to find api keys by application", ex);
             throw new TechnicalException("Failed to find api keys by application", ex);
@@ -349,6 +351,7 @@ public class JdbcApiKeyRepository extends JdbcAbstractCrudRepository<ApiKey, Str
                 .append(" join ")
                 .append(KEY_SUBSCRIPTION)
                 .append(" ks on ks.key_id = k.id")
+                .append(" order by k.updated_at desc ")
                 .toString();
 
             CollatingRowMapper<ApiKey> rowMapper = new CollatingRowMapper<>(getOrm().getRowMapper(), CHILD_ADDER, "id");

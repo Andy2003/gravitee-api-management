@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -106,21 +107,26 @@ public class MongoSubscriptionRepository implements SubscriptionRepository {
         internalSubscriptionRepository.deleteById(plan);
     }
 
-    private SubscriptionMongo map(Subscription subscription) {
-        return (subscription == null) ? null : mapper.map(subscription, SubscriptionMongo.class);
-    }
-
-    private Subscription map(SubscriptionMongo subscriptionMongo) {
-        return (subscriptionMongo == null) ? null : mapper.map(subscriptionMongo, Subscription.class);
-    }
-
     @Override
     public Set<Subscription> findAll() throws TechnicalException {
         return internalSubscriptionRepository.findAll().stream().map(this::map).collect(Collectors.toSet());
     }
 
     @Override
-    public Set<Subscription> findByIdIn(Collection<String> ids) throws TechnicalException {
-        return internalSubscriptionRepository.findByIdIn(ids).stream().map(this::map).collect(Collectors.toSet());
+    public List<Subscription> findByIdIn(Collection<String> ids) throws TechnicalException {
+        try {
+            Iterable<SubscriptionMongo> subscriptions = internalSubscriptionRepository.findAllById(ids);
+            return StreamSupport.stream(subscriptions.spliterator(), false).map(this::map).collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new TechnicalException("An error occurred trying to find subscriptions by id list", e);
+        }
+    }
+
+    private SubscriptionMongo map(Subscription subscription) {
+        return (subscription == null) ? null : mapper.map(subscription, SubscriptionMongo.class);
+    }
+
+    private Subscription map(SubscriptionMongo subscriptionMongo) {
+        return (subscriptionMongo == null) ? null : mapper.map(subscriptionMongo, Subscription.class);
     }
 }

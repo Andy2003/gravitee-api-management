@@ -20,7 +20,6 @@ import static java.util.stream.Collectors.*;
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.ApiKeyRepository;
 import io.gravitee.repository.management.api.search.ApiKeyCriteria;
-import io.gravitee.repository.management.model.AlertEvent;
 import io.gravitee.repository.management.model.ApiKey;
 import io.gravitee.repository.mongodb.management.internal.key.ApiKeyMongoRepository;
 import io.gravitee.repository.mongodb.management.internal.model.ApiKeyMongo;
@@ -104,8 +103,12 @@ public class MongoApiKeyRepository implements ApiKeyRepository {
     }
 
     @Override
-    public Set<ApiKey> findByApplication(String applicationId) throws TechnicalException {
-        return internalApiKeyRepo.findByApplication(applicationId).stream().map(this::toApiKey).collect(toSet());
+    public List<ApiKey> findByApplication(String applicationId) throws TechnicalException {
+        try {
+            return internalApiKeyRepo.findByApplication(applicationId).stream().map(this::toApiKey).collect(toList());
+        } catch (Exception e) {
+            throw new TechnicalException("An error occurred trying to find api key by application", e);
+        }
     }
 
     private ApiKey toApiKey(ApiKeyMongo apiKeyMongo) {

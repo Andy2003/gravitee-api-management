@@ -84,7 +84,7 @@ public class ApiKeyRepositoryWrapper implements ApiKeyRepository {
     }
 
     @Override
-    public Set<ApiKey> findByApplication(String applicationId) throws TechnicalException {
+    public List<ApiKey> findByApplication(String applicationId) throws TechnicalException {
         throw new IllegalStateException();
     }
 }

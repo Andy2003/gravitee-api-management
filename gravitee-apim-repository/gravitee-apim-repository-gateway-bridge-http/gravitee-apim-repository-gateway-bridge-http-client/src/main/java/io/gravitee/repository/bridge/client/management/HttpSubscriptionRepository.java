@@ -83,7 +83,7 @@ public class HttpSubscriptionRepository extends AbstractRepository implements Su
     }
 
     @Override
-    public Set<Subscription> findByIdIn(Collection<String> ids) {
+    public List<Subscription> findByIdIn(Collection<String> ids) {
         throw new IllegalStateException();
     }
 }

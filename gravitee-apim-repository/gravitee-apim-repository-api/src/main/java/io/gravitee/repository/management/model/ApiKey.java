@@ -216,7 +216,7 @@ public class ApiKey implements Serializable {
      * @deprecated
      * Starting from 3.17 this field is kept for backward compatibility only and subscriptions should be used instead
      */
-    @Deprecated
+    @Deprecated(since = "3.17.0", forRemoval = true)
     public String getSubscription() {
         return subscription;
     }

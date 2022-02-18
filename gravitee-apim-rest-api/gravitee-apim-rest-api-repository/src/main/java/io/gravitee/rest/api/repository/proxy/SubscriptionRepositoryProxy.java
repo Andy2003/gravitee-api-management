@@ -72,7 +72,7 @@ public class SubscriptionRepositoryProxy extends AbstractProxy<SubscriptionRepos
     }
 
     @Override
-    public Set<Subscription> findByIdIn(Collection<String> ids) throws TechnicalException {
+    public List<Subscription> findByIdIn(Collection<String> ids) throws TechnicalException {
         return target.findByIdIn(ids);
     }
 }

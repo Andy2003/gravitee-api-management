@@ -77,7 +77,7 @@ public class ApiKeyRepositoryProxy extends AbstractProxy<ApiKeyRepository> imple
     }
 
     @Override
-    public Set<ApiKey> findByApplication(String applicationId) throws TechnicalException {
+    public List<ApiKey> findByApplication(String applicationId) throws TechnicalException {
         return target.findByApplication(applicationId);
     }
 }

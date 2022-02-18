@@ -16,8 +16,6 @@
 package io.gravitee.repository.mongodb.management.internal.plan;
 
 import io.gravitee.repository.mongodb.management.internal.model.SubscriptionMongo;
-import java.util.Collection;
-import java.util.Set;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
@@ -26,6 +24,4 @@ import org.springframework.stereotype.Repository;
  * @author GraviteeSource Team
  */
 @Repository
-public interface SubscriptionMongoRepository extends MongoRepository<SubscriptionMongo, String>, SubscriptionMongoRepositoryCustom {
-    Set<SubscriptionMongo> findByIdIn(Collection<String> ids);
-}
+public interface SubscriptionMongoRepository extends MongoRepository<SubscriptionMongo, String>, SubscriptionMongoRepositoryCustom {}
