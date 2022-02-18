@@ -252,7 +252,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
 
             // If this is not a shared API key,
             // Get the subscription to get ending date and set key expiration date
-            if (!apiKeyEntity.getApplication().getApiKeyMode().equals(ApiKeyMode.SHARED.name())) {
+            if (!apiKeyEntity.getApplication().getApiKeyMode().equals(io.gravitee.rest.api.model.ApiKeyMode.SHARED)) {
                 SubscriptionEntity subscription = subscriptionService.findById(key.getSubscriptions().get(0));
                 if (subscription.getStatus() != SubscriptionStatus.PAUSED && subscription.getStatus() != SubscriptionStatus.ACCEPTED) {
                     throw new SubscriptionNotActiveException(subscription);
@@ -346,7 +346,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
     public ApiKeyEntity update(ApiKeyEntity apiKeyEntity) {
         try {
             LOGGER.debug("Update API Key with id {}", apiKeyEntity.getId());
-            ApiKey key = apiKeyRepository.findById(apiKeyEntity.getId()).orElseThrow(() -> new ApiKeyNotFoundException());
+            ApiKey key = apiKeyRepository.findById(apiKeyEntity.getId()).orElseThrow(ApiKeyNotFoundException::new);
 
             checkApiKeyExpired(key);
 
@@ -397,37 +397,33 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
     }
 
     @Override
-    public boolean canCreate(String apiKey, SubscriptionEntity subscription) {
+    public boolean canCreate(String apiKeyValue, SubscriptionEntity subscription) {
         LOGGER.debug("Check if an API Key can be created for subscription {}", subscription.getId());
 
         // TODO: make environment a parameter
         ApplicationEntity application = applicationService.findById(GraviteeContext.getCurrentEnvironment(), subscription.getApplication());
 
-        if (!application.getApiKeyMode().equals(ApiKeyMode.SHARED.name())) {
-            try {
-                return apiKeyRepository
-                    .findByKey(apiKey)
-                    .stream()
-                    .noneMatch(
-                        existingKey ->
-                            !existingKey.getApplication().equals(application.getId()) ||
-                            (
-                                existingKey.getApplication().equals(application.getId()) &&
-                                existingKey.getSubscriptions().contains(subscription.getId())
-                            )
-                    );
-            } catch (TechnicalException ex) {
-                String message = String.format(
-                    "An error occurs while checking if API Key can be created for api %s and application %s",
-                    subscription.getApi(),
-                    subscription.getApplication()
+        try {
+            return apiKeyRepository
+                .findByKey(apiKeyValue)
+                .stream()
+                .noneMatch(
+                    existingKey ->
+                        !existingKey.getApplication().equals(application.getId()) ||
+                        (
+                            existingKey.getApplication().equals(application.getId()) &&
+                            existingKey.getSubscriptions().contains(subscription.getId())
+                        )
                 );
-                LOGGER.error(message, ex);
-                throw new TechnicalManagementException(message, ex);
-            }
+        } catch (TechnicalException ex) {
+            String message = String.format(
+                "An error occurs while checking if API Key can be created for api %s and application %s",
+                subscription.getApi(),
+                subscription.getApplication()
+            );
+            LOGGER.error(message, ex);
+            throw new TechnicalManagementException(message, ex);
         }
-        // TODO what if we are running in SHARED mode ?
-        return false;
     }
 
     @Override
@@ -491,10 +487,11 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
         }
 
         key.setUpdatedAt(now);
+
         if (!key.isRevoked()) {
             // If API key is not shared
             // The expired date must be <= than the subscription end date
-            if (!apiKeyEntity.getApplication().getApiKeyMode().equals(ApiKeyMode.SHARED.name())) {
+            if (!apiKeyEntity.getApplication().getApiKeyMode().equals(io.gravitee.rest.api.model.ApiKeyMode.SHARED)) {
                 SubscriptionEntity subscription = subscriptionService.findById(key.getSubscriptions().get(0));
                 if (
                     subscription.getEndingAt() != null &&
@@ -560,7 +557,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
         ApplicationEntity application = applicationService.findById(GraviteeContext.getCurrentEnvironment(), key.getApplication());
 
         if (!application.getApiKeyMode().equals(io.gravitee.rest.api.model.ApiKeyMode.SHARED)) {
-            SubscriptionEntity subscription = subscriptionService.findByIdIn(key.getSubscriptions()).get(0);
+            SubscriptionEntity subscription = subscriptionService.findById(key.getSubscriptions().get(0));
 
             Map<Audit.AuditProperties, String> properties = new LinkedHashMap<>();
             properties.put(API_KEY, key.getKey());
@@ -579,7 +576,7 @@ public class ApiKeyServiceImpl extends TransactionalService implements ApiKeySer
         ApplicationEntity application = applicationService.findById(GraviteeContext.getCurrentEnvironment(), key.getApplication());
 
         if (!application.getApiKeyMode().equals(ApiKeyMode.SHARED.name())) {
-            SubscriptionEntity subscription = subscriptionService.findByIdIn(key.getSubscriptions()).get(0);
+            SubscriptionEntity subscription = subscriptionService.findById(key.getSubscriptions().get(0));
             PlanEntity plan = planService.findById(subscription.getPlan());
             ApiModelEntity api = apiService.findByIdForTemplates(subscription.getApi());
             PrimaryOwnerEntity owner = application.getPrimaryOwner();
