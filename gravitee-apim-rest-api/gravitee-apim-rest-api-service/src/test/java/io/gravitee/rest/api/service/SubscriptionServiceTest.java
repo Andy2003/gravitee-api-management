@@ -468,7 +468,7 @@ public class SubscriptionServiceTest {
         // Verify
         verify(subscriptionRepository, times(1)).create(any(Subscription.class));
         verify(subscriptionRepository, times(1)).update(any(Subscription.class));
-        verify(apiKeyService, times(1)).generate(any());
+        verify(apiKeyService, times(1)).generate(anyString(), any());
         assertNotNull(subscriptionEntity.getId());
         assertNotNull(subscriptionEntity.getApplication());
         assertNotNull(subscriptionEntity.getCreatedAt());
@@ -1138,19 +1138,19 @@ public class SubscriptionServiceTest {
 
         // subscription1 should be returned cause matches api and status query
         Subscription subscription1 = buildTestSubscription("sub1", "api-id-1", Subscription.Status.ACCEPTED);
-        when(subscriptionRepository.findById("subscription-1")).thenReturn(Optional.of(subscription1));
+        when(subscriptionRepository.findByIdIn(List.of("subscription-1"))).thenReturn(List.of(subscription1));
 
         // subscription2 should be filtered cause API id doesn't match
         Subscription subscription2 = buildTestSubscription("sub2", "api-id-2", Subscription.Status.PENDING);
-        when(subscriptionRepository.findById("subscription-2")).thenReturn(Optional.of(subscription2));
+        when(subscriptionRepository.findByIdIn(List.of("subscription-2"))).thenReturn(List.of(subscription2));
 
         // subscription3 should be returned cause matches api and status query
         Subscription subscription3 = buildTestSubscription("sub3", "api-id-3", Subscription.Status.PENDING);
-        when(subscriptionRepository.findById("subscription-3")).thenReturn(Optional.of(subscription3));
+        when(subscriptionRepository.findByIdIn(List.of("subscription-3"))).thenReturn(List.of(subscription3));
 
         // subscription4 should be filtered cause status doesn't match
         Subscription subscription4 = buildTestSubscription("sub4", "api-id-4", Subscription.Status.PAUSED);
-        when(subscriptionRepository.findById("subscription-4")).thenReturn(Optional.of(subscription4));
+        when(subscriptionRepository.findByIdIn(List.of("subscription-4"))).thenReturn(List.of(subscription4));
 
         Page<SubscriptionEntity> page = subscriptionService.search(query, Mockito.mock(Pageable.class));
 
