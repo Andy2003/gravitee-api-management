@@ -112,7 +112,7 @@ public class ApiKeyServiceTest {
         when(application.getApiKeyMode()).thenReturn(ApiKeyMode.UNSPECIFIED);
         when(applicationService.findById(anyString(), eq(APPLICATION_ID))).thenReturn(application);
         // Run
-        final ApiKeyEntity apiKey = apiKeyService.generate(SUBSCRIPTION_ID);
+        final ApiKeyEntity apiKey = apiKeyService.generate(application, subscription, null);
 
         // Verify
         verify(apiKeyRepository, times(1)).create(any());
@@ -147,7 +147,7 @@ public class ApiKeyServiceTest {
         when(applicationService.findById(anyString(), anyString())).thenReturn(application);
 
         // Run
-        final ApiKeyEntity apiKey = apiKeyService.generate(SUBSCRIPTION_ID, customApiKey);
+        final ApiKeyEntity apiKey = apiKeyService.generate(application, subscription, customApiKey);
 
         // Verify
         verify(apiKeyRepository, times(1)).create(any());
@@ -169,9 +169,9 @@ public class ApiKeyServiceTest {
 
     @Test(expected = TechnicalManagementException.class)
     public void shouldNotGenerateBecauseTechnicalException() {
-        when(subscriptionService.findById(SUBSCRIPTION_ID)).thenThrow(TechnicalManagementException.class);
-
-        apiKeyService.generate(SUBSCRIPTION_ID);
+        when(subscription.getId()).thenReturn(SUBSCRIPTION_ID);
+        when(applicationService.findById(any(), any())).thenThrow(TechnicalManagementException.class);
+        apiKeyService.generate(application, subscription, "a-custom-key");
     }
 
     @Test(expected = ApiKeyAlreadyExistingException.class)
@@ -182,11 +182,10 @@ public class ApiKeyServiceTest {
 
         when(subscription.getApplication()).thenReturn(APPLICATION_ID);
 
-        when(subscriptionService.findById(SUBSCRIPTION_ID)).thenReturn(subscription);
         when(apiKeyRepository.findByKey("alreadyExistingApiKey")).thenReturn(List.of(existingKey));
         when(applicationService.findById(anyString(), anyString())).thenReturn(application);
 
-        apiKeyService.generate(SUBSCRIPTION_ID, "alreadyExistingApiKey");
+        apiKeyService.generate(application, subscription, "alreadyExistingApiKey");
     }
 
     @Test
@@ -439,7 +438,7 @@ public class ApiKeyServiceTest {
         when(apiService.findByIdForTemplates(any())).thenReturn(api);
 
         // Run
-        final ApiKeyEntity apiKeyEntity = apiKeyService.renew(SUBSCRIPTION_ID);
+        final ApiKeyEntity apiKeyEntity = apiKeyService.renew(subscription);
 
         // Verify
         // A new API Key has been created
@@ -489,7 +488,7 @@ public class ApiKeyServiceTest {
         when(apiService.findByIdForTemplates(any())).thenReturn(api);
 
         // Run
-        final ApiKeyEntity apiKeyEntity = apiKeyService.renew(SUBSCRIPTION_ID);
+        final ApiKeyEntity apiKeyEntity = apiKeyService.renew(subscription);
 
         // Verify
         // A new API Key has been created
@@ -511,12 +510,12 @@ public class ApiKeyServiceTest {
         SubscriptionEntity subscriptionEntity = new SubscriptionEntity();
         subscriptionEntity.setApi(API_ID);
         subscriptionEntity.setApplication(APPLICATION_ID);
+        when(subscription.getApplication()).thenReturn("another-application-id");
 
-        when(applicationService.findById(anyString(), anyString())).thenReturn(application);
-        when(subscriptionService.findById(SUBSCRIPTION_ID)).thenReturn(subscriptionEntity);
+        when(applicationService.findById(any(), anyString())).thenReturn(application);
         when(apiKeyRepository.findByKey("alreadyExistingApiKey")).thenReturn(List.of(existingKey));
 
-        apiKeyService.renew(SUBSCRIPTION_ID, "alreadyExistingApiKey");
+        apiKeyService.renew(subscription, "alreadyExistingApiKey");
     }
 
     @Test(expected = ApiKeyNotFoundException.class)

@@ -306,7 +306,7 @@ public class SubscriptionServiceTest {
         // Verify
         verify(subscriptionRepository, times(1)).create(any(Subscription.class));
         verify(subscriptionRepository, never()).update(any(Subscription.class));
-        verify(apiKeyService, never()).generate(any());
+        verify(apiKeyService, never()).generate(any(), any(), anyString());
         assertNotNull(subscriptionEntity.getId());
         assertNotNull(subscriptionEntity.getApplication());
         assertNotNull(subscriptionEntity.getCreatedAt());
@@ -339,7 +339,7 @@ public class SubscriptionServiceTest {
         ArgumentCaptor<Subscription> subscriptionCapture = ArgumentCaptor.forClass(Subscription.class);
         verify(subscriptionRepository, times(1)).create(subscriptionCapture.capture());
         verify(subscriptionRepository, never()).update(any(Subscription.class));
-        verify(apiKeyService, never()).generate(any());
+        verify(apiKeyService, never()).generate(any(), any(), anyString());
 
         assertNotNull(subscriptionEntity.getId());
         assertNotNull(subscriptionEntity.getApplication());
@@ -468,7 +468,7 @@ public class SubscriptionServiceTest {
         // Verify
         verify(subscriptionRepository, times(1)).create(any(Subscription.class));
         verify(subscriptionRepository, times(1)).update(any(Subscription.class));
-        verify(apiKeyService, times(1)).generate(anyString(), any());
+        verify(apiKeyService, times(1)).generate(any(), eq(subscriptionEntity), any());
         assertNotNull(subscriptionEntity.getId());
         assertNotNull(subscriptionEntity.getApplication());
         assertNotNull(subscriptionEntity.getCreatedAt());
@@ -535,7 +535,7 @@ public class SubscriptionServiceTest {
         // Verify
         verify(subscriptionRepository, times(1)).create(any(Subscription.class));
         verify(subscriptionRepository, times(1)).update(any(Subscription.class));
-        verify(apiKeyService, never()).generate(any());
+        verify(apiKeyService, never()).generate(any(), any(), anyString());
         assertNotNull(subscriptionEntity.getId());
         assertNotNull(subscriptionEntity.getApplication());
         assertNotNull(subscriptionEntity.getCreatedAt());
@@ -872,7 +872,7 @@ public class SubscriptionServiceTest {
         final SubscriptionEntity subscriptionEntity = subscriptionService.process(processSubscription, USER_ID);
 
         // Verify
-        verify(apiKeyService, never()).generate(any());
+        verify(apiKeyService, never()).generate(any(), any(), anyString());
         verify(userService).findById(SUBSCRIBER_ID);
         verify(notifierService).triggerEmail(any(), anyString(), anyMap(), anyString());
 
@@ -910,7 +910,7 @@ public class SubscriptionServiceTest {
         final SubscriptionEntity subscriptionEntity = subscriptionService.process(processSubscription, USER_ID);
 
         // Verify
-        verify(apiKeyService, never()).generate(any());
+        verify(apiKeyService, never()).generate(any(), any(), anyString());
         verify(userService).findById(SUBSCRIBER_ID);
         verify(notifierService, never()).triggerEmail(any(), anyString(), anyMap(), anyString());
 
@@ -951,7 +951,7 @@ public class SubscriptionServiceTest {
         final SubscriptionEntity subscriptionEntity = subscriptionService.process(processSubscription, USER_ID);
 
         // Verify
-        verify(apiKeyService, times(1)).generate(any(), any());
+        verify(apiKeyService, times(1)).generate(any(), any(), anyString());
         assertEquals(SubscriptionStatus.ACCEPTED, subscriptionEntity.getStatus());
         assertEquals(USER_ID, subscriptionEntity.getProcessedBy());
         assertNotNull(subscriptionEntity.getProcessedAt());

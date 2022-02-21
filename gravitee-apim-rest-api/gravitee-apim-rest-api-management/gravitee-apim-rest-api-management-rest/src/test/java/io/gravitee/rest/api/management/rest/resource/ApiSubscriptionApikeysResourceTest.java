@@ -17,6 +17,7 @@ package io.gravitee.rest.api.management.rest.resource;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 
@@ -25,6 +26,8 @@ import io.gravitee.rest.api.model.ApiKeyEntity;
 import java.util.List;
 import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.Response;
+
+import io.gravitee.rest.api.model.SubscriptionEntity;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -62,8 +65,12 @@ public class ApiSubscriptionApikeysResourceTest extends AbstractResourceTest {
     @Test
     public void post_on_renew_should_return_renew_apikeys_and_return_http_201_with_location_header() {
         ApiKeyEntity renewedApiKey = new ApiKeyEntity();
+        SubscriptionEntity subscription = new SubscriptionEntity();
         renewedApiKey.setId("test-id");
-        when(apiKeyService.renew(SUBSCRIPTION_ID, null)).thenReturn(renewedApiKey);
+        subscription.setId("test-subscription-id");
+
+        when(subscriptionService.findById(anyString())).thenReturn(subscription);
+        when(apiKeyService.renew(any(), any())).thenReturn(renewedApiKey);
 
         Response response = envTarget("/_renew").request().post(null);
 

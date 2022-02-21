@@ -59,7 +59,7 @@ public class SubscriptionKeysResource extends AbstractResource {
             hasPermission(RolePermission.APPLICATION_SUBSCRIPTION, subscriptionEntity.getApplication(), RolePermissionAction.UPDATE) ||
             hasPermission(RolePermission.API_SUBSCRIPTION, subscriptionEntity.getApi(), RolePermissionAction.UPDATE)
         ) {
-            final Key createdKey = keyMapper.convert(apiKeyService.renew(subscriptionId));
+            final Key createdKey = keyMapper.convert(apiKeyService.renew(subscriptionEntity));
             return Response.status(Response.Status.CREATED).entity(createdKey).build();
         }
         throw new ForbiddenAccessException();
