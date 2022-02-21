@@ -17,11 +17,13 @@ package io.gravitee.gateway.debug.vertx;
 
 import io.gravitee.common.http.IdGenerator;
 import io.gravitee.gateway.api.Response;
+import io.gravitee.gateway.debug.reactor.handler.context.PathTransformer;
 import io.gravitee.gateway.http.vertx.VertxHttpServerRequest;
 
 public class VertxHttpServerRequestDebugDecorator extends VertxHttpServerRequest {
 
     private final VertxHttpServerRequest delegate;
+    private String sanitizedContextPath;
 
     public VertxHttpServerRequestDebugDecorator(VertxHttpServerRequest delegate, IdGenerator idGenerator) {
         super(delegate.getNativeServerRequest(), idGenerator);
@@ -32,4 +34,18 @@ public class VertxHttpServerRequestDebugDecorator extends VertxHttpServerRequest
     public Response create() {
         return new VertxHttpServerResponseDebugDecorator(delegate);
     }
+    //    @Override
+    //    public String contextPath() {
+    //        if (sanitizedContextPath == null) {
+    //            // get header GraviteeDebugEvent and remove it
+    //            final String eventId = headers().get("X-Gravitee-Debug-Event-Id");
+    //            headers().remove("X-Gravitee-Debug-Event-Id");
+    //            // change contextPath (first time only)
+    //            sanitizedContextPath = PathTransformer.removeEventIdFromPath(eventId, super.contextPath());
+    //            // and it should be ok
+    //
+    //        }
+    //
+    //        return sanitizedContextPath;
+    //    }
 }
